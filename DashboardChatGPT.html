@@ -1,0 +1,3746 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Battery Energy Storage System Dashboard</title>
+
+    <!-- Doughnut charts and small summary charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+    <!-- High-performance main time-series chart -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+
+    <style>
+      :root {
+        --background: #0f172a;
+        --background-soft: #111c31;
+        --card: #1e293b;
+        --card-dark: #0b1522;
+        --border: #334155;
+        --border-light: rgba(148, 163, 184, 0.18);
+
+        --blue: #3b82f6;
+        --blue-light: #60a5fa;
+        --green: #22c55e;
+        --green-light: #34d399;
+        --yellow: #facc15;
+        --orange: #f59e0b;
+        --red: #ef4444;
+        --pink: #fb7185;
+        --purple: #8b5cf6;
+        --teal: #2dd4bf;
+        --cyan: #06b6d4;
+
+        --white: #f8fafc;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+
+        --radius: 16px;
+        --shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+
+        background:
+          radial-gradient(
+            circle at top right,
+            rgba(59, 130, 246, 0.12),
+            transparent 30%
+          ),
+          var(--background);
+
+        color: var(--text);
+
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+
+        line-height: 1.5;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .dashboard {
+        width: min(1900px, 100%);
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .card {
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius);
+        background: rgba(30, 41, 59, 0.92);
+        box-shadow: var(--shadow);
+      }
+
+      .section-card {
+        margin-bottom: 24px;
+        padding: 20px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .section-title {
+        color: var(--white);
+        font-size: 1.05rem;
+        font-weight: 800;
+      }
+
+      .section-subtitle {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .section-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .action-button {
+        min-height: 36px;
+        padding: 7px 12px;
+
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        border-radius: 9px;
+
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--blue-light);
+
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .action-button:hover {
+        background: rgba(59, 130, 246, 0.2);
+      }
+
+      /* =====================================================
+       HEADER
+       ===================================================== */
+
+      .dashboard-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .header-title-group {
+        min-width: 0;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        margin-bottom: 8px;
+
+        color: var(--blue-light);
+
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+
+        border-radius: 50%;
+
+        background: var(--green);
+
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+      }
+
+      h1 {
+        color: var(--white);
+        font-size: clamp(1.6rem, 3vw, 2.5rem);
+        line-height: 1.2;
+        letter-spacing: -0.03em;
+      }
+
+      .header-description {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .header-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .control-box {
+        min-width: 170px;
+        padding: 12px 14px;
+
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+
+        background: rgba(30, 41, 59, 0.82);
+
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+        backdrop-filter: blur(10px);
+      }
+
+      .control-label {
+        display: block;
+        margin-bottom: 5px;
+
+        color: var(--muted);
+
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .control-value {
+        color: var(--white);
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      .date-select {
+        width: 100%;
+
+        border: none;
+        outline: none;
+
+        background: transparent;
+        color: var(--white);
+
+        font-weight: 700;
+      }
+
+      .date-select option {
+        color: var(--white);
+        background: var(--card);
+      }
+
+      /* =====================================================
+       LOADING / ERROR
+       ===================================================== */
+
+      .state-panel {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+
+        min-height: 260px;
+        padding: 32px;
+
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius);
+
+        background: var(--card);
+
+        text-align: center;
+        box-shadow: var(--shadow);
+      }
+
+      .state-panel.active {
+        display: flex;
+      }
+
+      .loader {
+        width: 44px;
+        height: 44px;
+        margin-bottom: 18px;
+
+        border: 4px solid rgba(148, 163, 184, 0.22);
+        border-top-color: var(--blue);
+        border-radius: 50%;
+
+        animation: spin 0.9s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .state-title {
+        margin-bottom: 8px;
+        color: var(--white);
+        font-size: 1.15rem;
+      }
+
+      .state-message {
+        max-width: 680px;
+        color: var(--muted);
+      }
+
+      .retry-button {
+        margin-top: 18px;
+        padding: 10px 18px;
+
+        border: 1px solid rgba(59, 130, 246, 0.45);
+        border-radius: 10px;
+
+        background: rgba(59, 130, 246, 0.14);
+        color: var(--blue-light);
+
+        font-weight: 700;
+      }
+
+      #dashboardContent {
+        display: none;
+      }
+
+      #dashboardContent.active {
+        display: block;
+      }
+
+      /* =====================================================
+       KPI
+       ===================================================== */
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(170px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .kpi-card {
+        position: relative;
+
+        min-height: 142px;
+        padding: 18px;
+
+        overflow: hidden;
+
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius);
+
+        background: linear-gradient(
+          145deg,
+          rgba(30, 41, 59, 0.98),
+          rgba(30, 41, 59, 0.82)
+        );
+
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+
+        transition:
+          transform 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .kpi-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(96, 165, 250, 0.45);
+      }
+
+      .kpi-card::after {
+        position: absolute;
+        right: -25px;
+        bottom: -35px;
+
+        width: 100px;
+        height: 100px;
+
+        border-radius: 50%;
+
+        background: var(--accent);
+        opacity: 0.09;
+
+        content: "";
+      }
+
+      .kpi-icon {
+        display: grid;
+
+        width: 42px;
+        height: 42px;
+
+        place-items: center;
+
+        border-radius: 12px;
+
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--accent);
+
+        font-size: 1.2rem;
+      }
+
+      .kpi-title {
+        margin-top: 14px;
+
+        color: var(--muted);
+
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+      }
+
+      .kpi-value-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-top: 3px;
+      }
+
+      .kpi-value {
+        color: var(--white);
+        font-size: clamp(1.2rem, 1.8vw, 1.7rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .kpi-unit {
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      /* =====================================================
+       MAIN CHART
+       ===================================================== */
+
+      .main-chart-container {
+        width: 100%;
+        height: 540px;
+      }
+
+      /* =====================================================
+       UTILIZATION CHARTS
+       ===================================================== */
+
+      .utilization-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .utilization-card {
+        min-width: 0;
+        padding: 18px;
+
+        border: 1px solid var(--border-light);
+        border-radius: 13px;
+
+        background: rgba(8, 17, 30, 0.55);
+      }
+
+      .utilization-card-title {
+        color: var(--white);
+        font-size: 0.94rem;
+        font-weight: 800;
+      }
+
+      .utilization-card-subtitle {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .donut-wrapper {
+        position: relative;
+
+        width: min(100%, 400px);
+        height: 245px;
+
+        margin: 8px auto 12px;
+      }
+
+      .utilization-legend {
+        display: grid;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .utilization-item {
+        display: grid;
+        grid-template-columns: 12px minmax(150px, 1fr) auto auto;
+        align-items: center;
+        gap: 10px;
+
+        color: var(--text);
+        font-size: 0.78rem;
+      }
+
+      .legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+      }
+
+      .utilization-item-value {
+        color: var(--white);
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .utilization-item-percentage {
+        min-width: 50px;
+        color: var(--teal);
+        font-weight: 800;
+        text-align: right;
+      }
+
+      /* =====================================================
+       SMALL CHARTS
+       ===================================================== */
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .chart-card {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .card-title {
+        color: var(--white);
+        font-size: 1rem;
+        font-weight: 750;
+      }
+
+      .card-subtitle {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .chart-badge {
+        flex-shrink: 0;
+        padding: 5px 9px;
+
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        border-radius: 999px;
+
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--blue-light);
+
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+      }
+
+      /* =====================================================
+       TABLE
+       ===================================================== */
+
+      .table-card {
+        overflow: hidden;
+      }
+
+      .table-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+
+        padding: 20px;
+
+        border-bottom: 1px solid var(--border-light);
+      }
+
+      .table-toolbar-right {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .search-box {
+        position: relative;
+        width: min(340px, 100%);
+      }
+
+      .search-icon {
+        position: absolute;
+        top: 50%;
+        left: 13px;
+
+        color: var(--muted);
+
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+
+      .search-input,
+      .page-size-select {
+        height: 42px;
+
+        border: 1px solid var(--border);
+        border-radius: 10px;
+
+        outline: none;
+
+        background: var(--background-soft);
+        color: var(--text);
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 0 14px 0 40px;
+      }
+
+      .page-size-select {
+        padding: 0 32px 0 12px;
+      }
+
+      .search-input:focus,
+      .page-size-select:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+      }
+
+      .page-size-select option {
+        background: var(--card);
+      }
+
+      .table-scroll {
+        width: 100%;
+        max-height: 620px;
+        overflow: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 1320px;
+        border-collapse: collapse;
+      }
+
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+
+        padding: 14px 16px;
+
+        border-bottom: 1px solid var(--border);
+
+        background: #172237;
+        color: var(--muted);
+
+        font-size: 0.73rem;
+        font-weight: 750;
+        letter-spacing: 0.03em;
+        text-align: right;
+        text-transform: uppercase;
+        white-space: nowrap;
+
+        cursor: pointer;
+        user-select: none;
+      }
+
+      thead th:first-child {
+        text-align: left;
+      }
+
+      thead th:hover {
+        color: var(--white);
+        background: #1b2a43;
+      }
+
+      .sort-indicator {
+        display: inline-block;
+        width: 14px;
+        margin-left: 4px;
+        color: var(--blue-light);
+      }
+
+      tbody td {
+        padding: 13px 16px;
+
+        border-bottom: 1px solid rgba(51, 65, 85, 0.58);
+
+        color: var(--text);
+
+        font-size: 0.82rem;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      tbody td:first-child {
+        color: var(--white);
+        font-weight: 700;
+        text-align: left;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(15, 23, 42, 0.22);
+      }
+
+      tbody tr:hover {
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .soc-cell {
+        min-width: 128px;
+      }
+
+      .soc-value {
+        display: inline-block;
+        min-width: 50px;
+        margin-right: 8px;
+      }
+
+      .soc-bar {
+        display: inline-block;
+
+        width: 54px;
+        height: 6px;
+
+        overflow: hidden;
+
+        border-radius: 999px;
+
+        background: rgba(148, 163, 184, 0.18);
+
+        vertical-align: middle;
+      }
+
+      .soc-bar-fill {
+        display: block;
+        height: 100%;
+
+        border-radius: inherit;
+
+        background: linear-gradient(
+          90deg,
+          var(--red),
+          var(--orange),
+          var(--green)
+        );
+      }
+
+      .empty-table {
+        padding: 40px !important;
+        color: var(--muted);
+        text-align: center !important;
+      }
+
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+
+        padding: 16px 20px;
+
+        border-top: 1px solid var(--border-light);
+      }
+
+      .table-info {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .page-button {
+        display: grid;
+
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+
+        place-items: center;
+
+        border: 1px solid var(--border);
+        border-radius: 9px;
+
+        background: var(--background-soft);
+        color: var(--text);
+
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .page-button:hover:not(:disabled),
+      .page-button.active {
+        border-color: var(--blue);
+        background: var(--blue);
+        color: white;
+      }
+
+      .page-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+
+      .page-ellipsis {
+        min-width: 24px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .dashboard-footer {
+        padding: 24px 0 4px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-align: center;
+      }
+
+      /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+
+      @media (max-width: 1600px) {
+        .kpi-grid {
+          grid-template-columns: repeat(4, minmax(180px, 1fr));
+        }
+      }
+
+      @media (max-width: 1050px) {
+        .dashboard-header {
+          flex-direction: column;
+        }
+
+        .header-controls {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .control-box {
+          flex: 1;
+        }
+
+        .kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .charts-grid,
+        .utilization-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .main-chart-container {
+          height: 480px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .dashboard {
+          padding: 14px;
+        }
+
+        .header-controls {
+          flex-direction: column;
+        }
+
+        .control-box {
+          width: 100%;
+        }
+
+        .kpi-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .section-header {
+          flex-direction: column;
+        }
+
+        .main-chart-container {
+          height: 430px;
+        }
+
+        .chart-wrapper {
+          height: 290px;
+        }
+
+        .table-toolbar,
+        .table-footer {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .table-toolbar-right {
+          justify-content: flex-start;
+        }
+
+        .search-box {
+          width: 100%;
+        }
+
+        .pagination {
+          flex-wrap: wrap;
+        }
+
+        .utilization-item {
+          grid-template-columns: 12px minmax(110px, 1fr) auto;
+        }
+
+        .utilization-item-percentage {
+          grid-column: 2 / 4;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="dashboard">
+      <!-- ===================================================
+         HEADER
+         =================================================== -->
+
+      <header class="dashboard-header">
+        <div class="header-title-group">
+          <div class="eyebrow">
+            <span class="status-dot"></span>
+            Live JSON Dashboard
+          </div>
+
+          <h1>Battery Energy Storage System Dashboard</h1>
+
+          <p class="header-description">
+            Load, solar generation, BESS operation and battery state-of-charge
+            monitoring.
+          </p>
+        </div>
+
+        <div class="header-controls">
+          <div class="control-box">
+            <span class="control-label">Selected date</span>
+
+            <select
+              id="dateFilter"
+              class="date-select"
+              aria-label="Select date"
+            >
+              <option value="all">All dates</option>
+            </select>
+          </div>
+
+          <div class="control-box">
+            <span class="control-label">Date range</span>
+            <div id="dateRange" class="control-value">—</div>
+          </div>
+
+          <div class="control-box">
+            <span class="control-label">Displayed records</span>
+            <div id="recordCount" class="control-value">0</div>
+          </div>
+
+          <div class="control-box">
+            <span class="control-label">Detected timestep</span>
+            <div id="timestepValue" class="control-value">—</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ===================================================
+         LOADING STATE
+         =================================================== -->
+
+      <section id="loadingPanel" class="state-panel active">
+        <div class="loader"></div>
+
+        <h2 class="state-title">Loading dashboard data</h2>
+
+        <p class="state-message">
+          Reading the latest information from chart.json.
+        </p>
+      </section>
+
+      <!-- ===================================================
+         ERROR STATE
+         =================================================== -->
+
+      <section id="errorPanel" class="state-panel">
+        <h2 class="state-title">Unable to load chart.json</h2>
+
+        <p id="errorMessage" class="state-message"></p>
+
+        <button id="retryButton" class="retry-button" type="button">
+          Retry
+        </button>
+      </section>
+
+      <!-- ===================================================
+         DASHBOARD CONTENT
+         =================================================== -->
+
+      <div id="dashboardContent">
+        <!-- KPI cards -->
+
+        <section id="kpiGrid" class="kpi-grid"></section>
+
+        <!-- =================================================
+           MAIN TIME-SERIES CHART
+           ================================================= -->
+
+        <section class="card section-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Main Chart – Year 1</h2>
+
+              <p class="section-subtitle">
+                Left axis: Power (kW). Right axis: SOC (%). Time is displayed in
+                UTC to match chart.json. Click legend items to hide or show a
+                series.
+              </p>
+            </div>
+
+            <div class="section-actions">
+              <button
+                id="resetMainChartZoom"
+                class="action-button"
+                type="button"
+              >
+                Reset Zoom
+              </button>
+            </div>
+          </div>
+
+          <div id="mainTimeSeriesChart" class="main-chart-container"></div>
+        </section>
+
+        <!-- =================================================
+           SOLAR UTILIZATION
+           ================================================= -->
+
+        <section class="card section-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Solar Utilization – Year 1</h2>
+
+              <p class="section-subtitle">
+                Energy values are calculated from the full original dataset
+                using the actual timestep between records.
+              </p>
+            </div>
+          </div>
+
+          <div class="utilization-grid">
+            <article class="utilization-card">
+              <h3 class="utilization-card-title">
+                Solar Generation Utilization
+              </h3>
+
+              <p id="totalAdjustedSolarText" class="utilization-card-subtitle">
+                Total adjusted solar: 0.00 kWh
+              </p>
+
+              <div class="donut-wrapper">
+                <canvas id="solarGenerationDonut"></canvas>
+              </div>
+
+              <div id="solarGenerationLegend" class="utilization-legend"></div>
+            </article>
+
+            <article class="utilization-card">
+              <h3 class="utilization-card-title">Surplus Solar Utilization</h3>
+
+              <p id="totalSurplusSolarText" class="utilization-card-subtitle">
+                Total surplus solar after load: 0.00 kWh
+              </p>
+
+              <div class="donut-wrapper">
+                <canvas id="surplusSolarDonut"></canvas>
+              </div>
+
+              <div id="surplusSolarLegend" class="utilization-legend"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- =================================================
+           SMALL SUMMARY CHARTS
+           ================================================= -->
+
+        <section class="charts-grid">
+          <article class="card chart-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Load, Solar and BESS Discharge</h2>
+
+                <p class="card-subtitle">
+                  Downsampled for screen performance when the dataset contains
+                  many records.
+                </p>
+              </div>
+
+              <span class="chart-badge">Line chart</span>
+            </div>
+
+            <div class="chart-wrapper">
+              <canvas id="powerChart"></canvas>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Battery State of Charge</h2>
+
+                <p class="card-subtitle">
+                  Battery SOC percentage throughout the selected period.
+                </p>
+              </div>
+
+              <span class="chart-badge">Area chart</span>
+            </div>
+
+            <div class="chart-wrapper">
+              <canvas id="socChart"></canvas>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">BESS Charge and Discharge</h2>
+
+                <p class="card-subtitle">
+                  Charging and discharging power from chart.json.
+                </p>
+              </div>
+
+              <span class="chart-badge">Bar chart</span>
+            </div>
+
+            <div class="chart-wrapper">
+              <canvas id="bessPowerChart"></canvas>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Available and Curtailed Solar</h2>
+
+                <p class="card-subtitle">
+                  SolarAdjusted compared with SolarCurtailed.
+                </p>
+              </div>
+
+              <span class="chart-badge">Comparison</span>
+            </div>
+
+            <div class="chart-wrapper">
+              <canvas id="solarChart"></canvas>
+            </div>
+          </article>
+        </section>
+
+        <!-- =================================================
+           TABLE
+           ================================================= -->
+
+        <section class="card table-card">
+          <div class="table-toolbar">
+            <div>
+              <h2 class="card-title">Detailed Time-Series Data</h2>
+
+              <p class="card-subtitle">
+                Search, sort and paginate all valid records.
+              </p>
+            </div>
+
+            <div class="table-toolbar-right">
+              <div class="search-box">
+                <span class="search-icon">⌕</span>
+
+                <input
+                  id="searchInput"
+                  class="search-input"
+                  type="search"
+                  placeholder="Search date, time or value..."
+                  aria-label="Search table"
+                />
+              </div>
+
+              <select
+                id="pageSizeSelect"
+                class="page-size-select"
+                aria-label="Rows per page"
+              >
+                <option value="10">10 rows</option>
+                <option value="25" selected>25 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-sort-key="date">
+                    Time
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="load">
+                    Load
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="solarAdjusted">
+                    Solar Adjusted
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="solarCurtailed">
+                    Solar Curtailed
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="bessCharge">
+                    BESS Charge
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="bessDischarge">
+                    BESS Discharge
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="socKwh">
+                    SOC Energy
+                    <span class="sort-indicator"></span>
+                  </th>
+
+                  <th data-sort-key="socPercent">
+                    SOC
+                    <span class="sort-indicator"></span>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <div id="tableInfo" class="table-info">Showing 0 records</div>
+
+            <div id="pagination" class="pagination"></div>
+          </div>
+        </section>
+
+        <footer class="dashboard-footer">
+          Data is loaded dynamically from chart.json. Date and time labels use
+          UTC to preserve the original timestamp display.
+        </footer>
+      </div>
+    </main>
+
+    <script>
+      "use strict";
+
+      /* =====================================================
+       FIELD NAMES
+
+       The primary schema is:
+
+       DateTime
+       Load (kW)
+       SolarAdjusted (kW)
+       SolarCurtailed (kW)
+       BessCharge (kW)
+       BessDischarge (kW)
+       SOC (kWh)
+       SOC (%)
+
+       Older field names are retained as fallbacks.
+       ===================================================== */
+
+      const FIELD_NAMES = {
+        dateTime: [
+          "DateTime",
+          "dateTime",
+          "datetime",
+          "Timestamp",
+          "timestamp",
+        ],
+
+        load: ["Load (kW)", "Load", "load"],
+
+        solarAdjusted: [
+          "SolarAdjusted (kW)",
+          "Adjusted Solar (kW)",
+          "SolarAdjusted",
+          "Adjusted Solar",
+          "solarAdjusted",
+          "adjustedSolar",
+        ],
+
+        solarCurtailed: [
+          "SolarCurtailed (kW)",
+          "Solar Curtailed (kW)",
+          "SolarCurtailed",
+          "Solar Curtailed",
+          "solarCurtailed",
+        ],
+
+        solarAfterCharging: [
+          "Adjusted Solar after BESS Charging (kW)",
+          "Adjusted Solar after BESS Charging",
+          "Solar after BESS Charging (kW)",
+          "solarAfterCharging",
+        ],
+
+        bessCharge: [
+          "BessCharge (kW)",
+          "BESS Charge (kW)",
+          "BessCharge",
+          "BESS Charge",
+          "bessCharge",
+        ],
+
+        chargeFromSolar: [
+          "BESS Charge from Solar (kW)",
+          "BESS Charge from Solar",
+          "bessChargeFromSolar",
+        ],
+
+        chargeFromGrid: [
+          "BESS Charge from Grid (kW)",
+          "BESS Charge from Grid",
+          "bessChargeFromGrid",
+        ],
+
+        bessDischarge: [
+          "BessDischarge (kW)",
+          "BESS Discharge (kW)",
+          "BessDischarge",
+          "BESS Discharge",
+          "bessDischarge",
+        ],
+
+        socKwh: ["SOC (kWh)", "SOC Energy (kWh)", "socKwh"],
+
+        socPercent: ["SOC (%)", "SOC", "socPercent", "soc"],
+      };
+
+      /* =====================================================
+       APPLICATION STATE
+       ===================================================== */
+
+      const state = {
+        allRecords: [],
+        dateFilteredRecords: [],
+        tableFilteredRecords: [],
+
+        medianTimestepHours: 0,
+
+        currentPage: 1,
+        pageSize: 25,
+
+        searchTerm: "",
+
+        sortKey: "date",
+        sortDirection: "asc",
+
+        selectedDate: "all",
+
+        smallCharts: {},
+        utilizationCharts: {},
+        mainChart: null,
+      };
+
+      /* =====================================================
+       DOM REFERENCES
+       ===================================================== */
+
+      const elements = {
+        loadingPanel: document.getElementById("loadingPanel"),
+
+        errorPanel: document.getElementById("errorPanel"),
+
+        errorMessage: document.getElementById("errorMessage"),
+
+        retryButton: document.getElementById("retryButton"),
+
+        dashboardContent: document.getElementById("dashboardContent"),
+
+        dateFilter: document.getElementById("dateFilter"),
+
+        dateRange: document.getElementById("dateRange"),
+
+        recordCount: document.getElementById("recordCount"),
+
+        timestepValue: document.getElementById("timestepValue"),
+
+        kpiGrid: document.getElementById("kpiGrid"),
+
+        mainTimeSeriesChart: document.getElementById("mainTimeSeriesChart"),
+
+        resetMainChartZoom: document.getElementById("resetMainChartZoom"),
+
+        totalAdjustedSolarText: document.getElementById(
+          "totalAdjustedSolarText",
+        ),
+
+        totalSurplusSolarText: document.getElementById("totalSurplusSolarText"),
+
+        solarGenerationLegend: document.getElementById("solarGenerationLegend"),
+
+        surplusSolarLegend: document.getElementById("surplusSolarLegend"),
+
+        searchInput: document.getElementById("searchInput"),
+
+        pageSizeSelect: document.getElementById("pageSizeSelect"),
+
+        tableBody: document.getElementById("tableBody"),
+
+        tableInfo: document.getElementById("tableInfo"),
+
+        pagination: document.getElementById("pagination"),
+
+        sortableHeaders: document.querySelectorAll("thead th[data-sort-key]"),
+      };
+
+      /* =====================================================
+       GENERIC HELPERS
+       ===================================================== */
+
+      function getField(record, candidateNames) {
+        for (const name of candidateNames) {
+          if (
+            Object.prototype.hasOwnProperty.call(record, name) &&
+            record[name] !== null &&
+            record[name] !== undefined &&
+            record[name] !== ""
+          ) {
+            return record[name];
+          }
+        }
+
+        return null;
+      }
+
+      function hasField(record, candidateNames) {
+        return candidateNames.some(
+          (name) =>
+            Object.prototype.hasOwnProperty.call(record, name) &&
+            record[name] !== null &&
+            record[name] !== undefined &&
+            record[name] !== "",
+        );
+      }
+
+      function toNumber(value, fallback = 0) {
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? value : fallback;
+        }
+
+        if (typeof value === "string") {
+          const normalized = value.trim().replace(/,/g, "").replace(/%/g, "");
+
+          const parsed = Number(normalized);
+
+          return Number.isFinite(parsed) ? parsed : fallback;
+        }
+
+        return fallback;
+      }
+
+      function toNonNegativeNumber(value) {
+        return Math.max(toNumber(value, 0), 0);
+      }
+
+      /**
+       * Parse DateTime safely.
+       *
+       * Numeric epoch timestamps are preserved as absolute timestamps.
+       * Display formatting later uses UTC methods so that:
+       *
+       * 1767225600000 -> 01/01/2026 00:00
+       *
+       * Supported inputs:
+       * - Epoch milliseconds
+       * - Epoch seconds
+       * - Numeric timestamp strings
+       * - "2026-01-01 13:30:00"
+       * - "2026-01-01T13:30:00"
+       */
+      function toDate(value) {
+        if (value instanceof Date) {
+          return Number.isNaN(value.getTime())
+            ? null
+            : new Date(value.getTime());
+        }
+
+        if (typeof value === "number" && Number.isFinite(value)) {
+          const timestamp =
+            Math.abs(value) < 100000000000 ? value * 1000 : value;
+
+          const date = new Date(timestamp);
+
+          return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        if (typeof value !== "string") {
+          return null;
+        }
+
+        const trimmedValue = value.trim();
+
+        if (!trimmedValue) {
+          return null;
+        }
+
+        if (/^-?\d+(\.\d+)?$/.test(trimmedValue)) {
+          return toDate(Number(trimmedValue));
+        }
+
+        const manualMatch = trimmedValue.match(
+          /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\.\d+)?$/,
+        );
+
+        if (manualMatch) {
+          const [, year, month, day, hour, minute, second = "0"] = manualMatch;
+
+          const timestamp = Date.UTC(
+            Number(year),
+            Number(month) - 1,
+            Number(day),
+            Number(hour),
+            Number(minute),
+            Number(second),
+          );
+
+          const date = new Date(timestamp);
+
+          return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        const parsedDate = new Date(trimmedValue);
+
+        return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+      }
+
+      /* =====================================================
+       UTC DATE FORMATTING
+
+       All labels use UTC so epoch values are displayed exactly
+       according to the timestamp's UTC clock time.
+       ===================================================== */
+
+      function padNumber(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function formatDateKey(date) {
+        return [
+          date.getUTCFullYear(),
+          padNumber(date.getUTCMonth() + 1),
+          padNumber(date.getUTCDate()),
+        ].join("-");
+      }
+
+      function formatDate(date) {
+        return [
+          padNumber(date.getUTCDate()),
+          padNumber(date.getUTCMonth() + 1),
+          date.getUTCFullYear(),
+        ].join("/");
+      }
+
+      function formatTime(date) {
+        return [
+          padNumber(date.getUTCHours()),
+          padNumber(date.getUTCMinutes()),
+        ].join(":");
+      }
+
+      function formatDateTime(date) {
+        return `${formatDate(date)} ${formatTime(date)}`;
+      }
+
+      function formatAxisDateTime(date) {
+        return (
+          `${padNumber(date.getUTCDate())}/` +
+          `${padNumber(date.getUTCMonth() + 1)} ` +
+          `${formatTime(date)}`
+        );
+      }
+
+      function formatNumber(value, maximumFractionDigits = 2) {
+        return new Intl.NumberFormat("en-US", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits,
+        }).format(toNumber(value));
+      }
+
+      function formatPower(value) {
+        return `${formatNumber(value, 2)} kW`;
+      }
+
+      function formatEnergy(value) {
+        return `${formatNumber(value, 2)} kWh`;
+      }
+
+      function formatPercent(value) {
+        return `${formatNumber(value, 2)}%`;
+      }
+
+      /* =====================================================
+       DATA NORMALIZATION
+       ===================================================== */
+
+      function normalizeRecords(rawRecords) {
+        if (!Array.isArray(rawRecords)) {
+          throw new Error("chart.json must contain a JSON array.");
+        }
+
+        const temporaryRecords = [];
+
+        rawRecords.forEach((rawRecord, index) => {
+          if (!rawRecord || typeof rawRecord !== "object") {
+            console.warn(
+              `Record ${index + 1} was skipped because it is not an object.`,
+            );
+
+            return;
+          }
+
+          const dateValue = getField(rawRecord, FIELD_NAMES.dateTime);
+
+          const date = toDate(dateValue);
+
+          if (!date) {
+            console.warn(
+              `Record ${index + 1} was skipped because DateTime is invalid:`,
+              dateValue,
+            );
+
+            return;
+          }
+
+          const solarAdjusted = toNonNegativeNumber(
+            getField(rawRecord, FIELD_NAMES.solarAdjusted),
+          );
+
+          const load = toNonNegativeNumber(
+            getField(rawRecord, FIELD_NAMES.load),
+          );
+
+          const explicitTotalChargeExists = hasField(
+            rawRecord,
+            FIELD_NAMES.bessCharge,
+          );
+
+          const explicitSolarCharge = toNonNegativeNumber(
+            getField(rawRecord, FIELD_NAMES.chargeFromSolar),
+          );
+
+          const explicitGridCharge = toNonNegativeNumber(
+            getField(rawRecord, FIELD_NAMES.chargeFromGrid),
+          );
+
+          const bessCharge = explicitTotalChargeExists
+            ? toNonNegativeNumber(getField(rawRecord, FIELD_NAMES.bessCharge))
+            : explicitSolarCharge + explicitGridCharge;
+
+          const solarChargeForSummary =
+            explicitSolarCharge > 0 ||
+            hasField(rawRecord, FIELD_NAMES.chargeFromSolar)
+              ? explicitSolarCharge
+              : bessCharge;
+
+          const solarCurtailedExists = hasField(
+            rawRecord,
+            FIELD_NAMES.solarCurtailed,
+          );
+
+          const solarCurtailed = solarCurtailedExists
+            ? toNonNegativeNumber(
+                getField(rawRecord, FIELD_NAMES.solarCurtailed),
+              )
+            : 0;
+
+          const explicitSolarAfterCharging = getField(
+            rawRecord,
+            FIELD_NAMES.solarAfterCharging,
+          );
+
+          /*
+           * With the new schema, Solar after BESS Charging is derived as:
+           *
+           * SolarAdjusted - BessCharge - SolarCurtailed
+           *
+           * This represents solar remaining for direct use after charging
+           * and curtailment allocations.
+           */
+          const solarAfterCharging =
+            explicitSolarAfterCharging !== null
+              ? toNonNegativeNumber(explicitSolarAfterCharging)
+              : Math.max(
+                  solarAdjusted - solarChargeForSummary - solarCurtailed,
+                  0,
+                );
+
+          temporaryRecords.push({
+            sourceIndex: index,
+
+            date,
+            timestamp: date.getTime(),
+            dateKey: formatDateKey(date),
+
+            load,
+            solarAdjusted,
+            solarCurtailed,
+
+            solarAfterCharging,
+
+            bessCharge,
+
+            chargeFromSolar: solarChargeForSummary,
+
+            chargeFromGrid: explicitGridCharge,
+
+            bessDischarge: toNonNegativeNumber(
+              getField(rawRecord, FIELD_NAMES.bessDischarge),
+            ),
+
+            socKwh: toNonNegativeNumber(
+              getField(rawRecord, FIELD_NAMES.socKwh),
+            ),
+
+            rawSocPercent: toNonNegativeNumber(
+              getField(rawRecord, FIELD_NAMES.socPercent),
+            ),
+          });
+        });
+
+        temporaryRecords.sort(
+          (firstRecord, secondRecord) =>
+            firstRecord.timestamp - secondRecord.timestamp,
+        );
+
+        /*
+         * Duplicate timestamp handling:
+         * keep the last record found for the same timestamp.
+         */
+        const uniqueRecordMap = new Map();
+
+        temporaryRecords.forEach((record) => {
+          if (uniqueRecordMap.has(record.timestamp)) {
+            console.warn(
+              "Duplicate DateTime detected. The latest row is retained:",
+              formatDateTime(record.date),
+            );
+          }
+
+          uniqueRecordMap.set(record.timestamp, record);
+        });
+
+        const records = Array.from(uniqueRecordMap.values()).sort(
+          (firstRecord, secondRecord) =>
+            firstRecord.timestamp - secondRecord.timestamp,
+        );
+
+        if (!records.length) {
+          throw new Error("No valid records remain after DateTime validation.");
+        }
+
+        /*
+         * SOC automatic format detection:
+         *
+         * max <= 1.2 -> fraction such as 0.05 to 0.95
+         * max > 1.2  -> percentage such as 5 to 95
+         */
+        const maximumRawSoc = Math.max(
+          ...records.map((record) => record.rawSocPercent),
+        );
+
+        const socStoredAsFraction = maximumRawSoc <= 1.2;
+
+        records.forEach((record) => {
+          const socPercent = socStoredAsFraction
+            ? record.rawSocPercent * 100
+            : record.rawSocPercent;
+
+          record.socPercent = Math.max(0, Math.min(100, socPercent));
+        });
+
+        return records;
+      }
+
+      /* =====================================================
+       TIMESTEP
+       ===================================================== */
+
+      function calculateMedian(values) {
+        if (!values.length) {
+          return 0;
+        }
+
+        const sortedValues = [...values].sort(
+          (firstValue, secondValue) => firstValue - secondValue,
+        );
+
+        const middleIndex = Math.floor(sortedValues.length / 2);
+
+        if (sortedValues.length % 2 === 0) {
+          return (
+            (sortedValues[middleIndex - 1] + sortedValues[middleIndex]) / 2
+          );
+        }
+
+        return sortedValues[middleIndex];
+      }
+
+      function calculateMedianTimestepHours(records) {
+        const validDifferencesHours = [];
+
+        for (let index = 0; index < records.length - 1; index += 1) {
+          const differenceMs =
+            records[index + 1].timestamp - records[index].timestamp;
+
+          if (Number.isFinite(differenceMs) && differenceMs > 0) {
+            validDifferencesHours.push(differenceMs / 3600000);
+          }
+        }
+
+        return calculateMedian(validDifferencesHours) || 1;
+      }
+
+      function attachTimestepHours(records) {
+        const medianTimestepHours = calculateMedianTimestepHours(records);
+
+        return records.map((record, index) => {
+          let timestepHours = medianTimestepHours;
+
+          if (index < records.length - 1) {
+            const differenceHours =
+              (records[index + 1].timestamp - record.timestamp) / 3600000;
+
+            if (Number.isFinite(differenceHours) && differenceHours > 0) {
+              timestepHours = differenceHours;
+            }
+          }
+
+          return {
+            ...record,
+            timestepHours,
+          };
+        });
+      }
+
+      /* =====================================================
+       KPI
+       ===================================================== */
+
+      function calculateMaximum(records, propertyName) {
+        if (!records.length) {
+          return 0;
+        }
+
+        return Math.max(...records.map((record) => record[propertyName]));
+      }
+
+      function calculateMinimum(records, propertyName) {
+        if (!records.length) {
+          return 0;
+        }
+
+        return Math.min(...records.map((record) => record[propertyName]));
+      }
+
+      function calculateAverage(records, propertyName) {
+        if (!records.length) {
+          return 0;
+        }
+
+        const total = records.reduce(
+          (sum, record) => sum + record[propertyName],
+          0,
+        );
+
+        return total / records.length;
+      }
+
+      function calculateKpis(records) {
+        return [
+          {
+            title: "Maximum Load",
+            value: calculateMaximum(records, "load"),
+            unit: "kW",
+            icon: "⚡",
+            accent: "#3b82f6",
+          },
+
+          {
+            title: "Minimum Load",
+            value: calculateMinimum(records, "load"),
+            unit: "kW",
+            icon: "↘",
+            accent: "#06b6d4",
+          },
+
+          {
+            title: "Average Load",
+            value: calculateAverage(records, "load"),
+            unit: "kW",
+            icon: "≈",
+            accent: "#8b5cf6",
+          },
+
+          {
+            title: "Maximum Solar",
+            value: calculateMaximum(records, "solarAdjusted"),
+            unit: "kW",
+            icon: "☀",
+            accent: "#facc15",
+          },
+
+          {
+            title: "Maximum BESS Charge",
+            value: calculateMaximum(records, "bessCharge"),
+            unit: "kW",
+            icon: "↓",
+            accent: "#f59e0b",
+          },
+
+          {
+            title: "Maximum BESS Discharge",
+            value: calculateMaximum(records, "bessDischarge"),
+            unit: "kW",
+            icon: "↑",
+            accent: "#ef4444",
+          },
+
+          {
+            title: "Maximum SOC",
+            value: calculateMaximum(records, "socPercent"),
+            unit: "%",
+            icon: "▣",
+            accent: "#22c55e",
+          },
+
+          {
+            title: "Average SOC",
+            value: calculateAverage(records, "socPercent"),
+            unit: "%",
+            icon: "◫",
+            accent: "#2dd4bf",
+          },
+        ];
+      }
+
+      function renderKpis(records) {
+        const kpis = calculateKpis(records);
+
+        elements.kpiGrid.innerHTML = kpis
+          .map(
+            (kpi) => `
+              <article
+                class="kpi-card"
+                style="--accent:${kpi.accent}"
+              >
+                <div class="kpi-icon">
+                  ${kpi.icon}
+                </div>
+
+                <div class="kpi-title">
+                  ${kpi.title}
+                </div>
+
+                <div class="kpi-value-row">
+                  <span class="kpi-value">
+                    ${formatNumber(kpi.value, 2)}
+                  </span>
+
+                  <span class="kpi-unit">
+                    ${kpi.unit}
+                  </span>
+                </div>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      /* =====================================================
+       SOLAR UTILIZATION CALCULATION
+       ===================================================== */
+
+      function calculateSolarUtilization(records) {
+        const recordsWithTimesteps = attachTimestepHours(records);
+
+        let totalAdjustedSolarKwh = 0;
+        let solarUsedDirectlyKwh = 0;
+        let solarChargedToBessKwh = 0;
+        let explicitSolarCurtailedKwh = 0;
+
+        let totalSurplusSolarKwh = 0;
+        let effectiveSurplusChargeKwh = 0;
+
+        recordsWithTimesteps.forEach((record) => {
+          const timestepHours = record.timestepHours;
+
+          const loadKw = Math.max(record.load, 0);
+
+          const adjustedSolarKw = Math.max(record.solarAdjusted, 0);
+
+          const rawSolarChargeKw = Math.max(record.chargeFromSolar, 0);
+
+          const explicitCurtailedKw = Math.max(record.solarCurtailed, 0);
+
+          /*
+           * Direct solar under the new schema:
+           *
+           * available solar minus charge allocation
+           * minus curtailed allocation, capped by load.
+           */
+          const calculatedDirectSolarKw = Math.max(
+            adjustedSolarKw - rawSolarChargeKw - explicitCurtailedKw,
+            0,
+          );
+
+          const solarUsedDirectlyKw = Math.min(loadKw, calculatedDirectSolarKw);
+
+          const surplusSolarKw = Math.max(adjustedSolarKw - loadKw, 0);
+
+          /*
+           * For the surplus utilization chart, charge is capped
+           * at the actual available surplus.
+           */
+          const effectiveChargeFromSolarKw = Math.min(
+            rawSolarChargeKw,
+            surplusSolarKw,
+          );
+
+          if (rawSolarChargeKw > surplusSolarKw + 0.001) {
+            console.warn(
+              "BESS charging exceeds available surplus solar at:",
+              formatDateTime(record.date),
+              {
+                bessChargeKw: rawSolarChargeKw,
+
+                surplusSolarKw,
+              },
+            );
+          }
+
+          totalAdjustedSolarKwh += adjustedSolarKw * timestepHours;
+
+          solarUsedDirectlyKwh += solarUsedDirectlyKw * timestepHours;
+
+          solarChargedToBessKwh +=
+            Math.min(rawSolarChargeKw, adjustedSolarKw) * timestepHours;
+
+          explicitSolarCurtailedKwh += explicitCurtailedKw * timestepHours;
+
+          totalSurplusSolarKwh += surplusSolarKw * timestepHours;
+
+          effectiveSurplusChargeKwh +=
+            effectiveChargeFromSolarKw * timestepHours;
+        });
+
+        /*
+         * Balance the generation chart so its three categories
+         * always sum to Total Adjusted Solar.
+         *
+         * This includes explicit SolarCurtailed values and any
+         * residual imbalance in the input flows.
+         */
+        const balancedSolarCurtailedKwh = Math.max(
+          totalAdjustedSolarKwh - solarUsedDirectlyKwh - solarChargedToBessKwh,
+          0,
+        );
+
+        if (
+          Math.abs(balancedSolarCurtailedKwh - explicitSolarCurtailedKwh) > 1
+        ) {
+          console.warn(
+            "Solar utilization balance differs from the integrated " +
+              "SolarCurtailed field.",
+            {
+              balancedSolarCurtailedKwh,
+              explicitSolarCurtailedKwh,
+            },
+          );
+        }
+
+        const surplusSolarCurtailedKwh = Math.max(
+          totalSurplusSolarKwh - effectiveSurplusChargeKwh,
+          0,
+        );
+
+        return {
+          totalAdjustedSolarKwh,
+          solarUsedDirectlyKwh,
+          solarChargedToBessKwh,
+          solarCurtailedKwh: balancedSolarCurtailedKwh,
+
+          totalSurplusSolarKwh,
+          effectiveSurplusChargeKwh,
+          surplusSolarCurtailedKwh,
+        };
+      }
+
+      function calculatePercentage(value, total) {
+        if (!Number.isFinite(total) || total <= 0) {
+          return 0;
+        }
+
+        return (value / total) * 100;
+      }
+
+      /* =====================================================
+       UTILIZATION DOUGHNUTS
+       ===================================================== */
+
+      function destroyUtilizationCharts() {
+        Object.values(state.utilizationCharts).forEach((chart) => {
+          chart?.destroy();
+        });
+
+        state.utilizationCharts = {};
+      }
+
+      function createDoughnutChart(canvasId, items) {
+        return new Chart(document.getElementById(canvasId), {
+          type: "doughnut",
+
+          data: {
+            labels: items.map((item) => item.label),
+
+            datasets: [
+              {
+                data: items.map((item) => item.value),
+
+                backgroundColor: items.map((item) => item.color),
+
+                borderColor: "#0b1522",
+                borderWidth: 4,
+                hoverOffset: 6,
+              },
+            ],
+          },
+
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "62%",
+
+            animation: {
+              duration: 450,
+            },
+
+            plugins: {
+              legend: {
+                display: false,
+              },
+
+              tooltip: {
+                backgroundColor: "rgba(15,23,42,0.97)",
+
+                titleColor: "#f8fafc",
+                bodyColor: "#e2e8f0",
+
+                borderColor: "rgba(96,165,250,0.35)",
+
+                borderWidth: 1,
+                padding: 11,
+                cornerRadius: 9,
+
+                callbacks: {
+                  label(context) {
+                    return (
+                      `${context.label}: ` + `${formatEnergy(context.raw)}`
+                    );
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function renderUtilizationLegend(container, items, total) {
+        container.innerHTML = items
+          .map((item) => {
+            const percentage = calculatePercentage(item.value, total);
+
+            return `
+              <div class="utilization-item">
+                <span
+                  class="legend-dot"
+                  style="background:${item.color}"
+                ></span>
+
+                <span>${item.label}</span>
+
+                <span class="utilization-item-value">
+                  ${formatEnergy(item.value)}
+                </span>
+
+                <span class="utilization-item-percentage">
+                  ${formatNumber(percentage, 1)}%
+                </span>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderSolarUtilization(records) {
+        destroyUtilizationCharts();
+
+        const summary = calculateSolarUtilization(records);
+
+        elements.totalAdjustedSolarText.textContent =
+          `Total adjusted solar: ` +
+          `${formatEnergy(summary.totalAdjustedSolarKwh)}`;
+
+        elements.totalSurplusSolarText.textContent =
+          `Total surplus solar after load: ` +
+          `${formatEnergy(summary.totalSurplusSolarKwh)}`;
+
+        const generationItems = [
+          {
+            label: "Solar Used Directly",
+
+            value: summary.solarUsedDirectlyKwh,
+
+            color: "#34d399",
+          },
+
+          {
+            label: "Solar Charged to BESS",
+
+            value: summary.solarChargedToBessKwh,
+
+            color: "#f59e0b",
+          },
+
+          {
+            label: "Solar Curtailed",
+
+            value: summary.solarCurtailedKwh,
+
+            color: "#fb7185",
+          },
+        ];
+
+        const surplusItems = [
+          {
+            label: "Surplus Solar Charged to BESS",
+
+            value: summary.effectiveSurplusChargeKwh,
+
+            color: "#f59e0b",
+          },
+
+          {
+            label: "Surplus Solar Curtailed",
+
+            value: summary.surplusSolarCurtailedKwh,
+
+            color: "#fb7185",
+          },
+        ];
+
+        state.utilizationCharts.generation = createDoughnutChart(
+          "solarGenerationDonut",
+          generationItems,
+        );
+
+        state.utilizationCharts.surplus = createDoughnutChart(
+          "surplusSolarDonut",
+          surplusItems,
+        );
+
+        renderUtilizationLegend(
+          elements.solarGenerationLegend,
+          generationItems,
+          summary.totalAdjustedSolarKwh,
+        );
+
+        renderUtilizationLegend(
+          elements.surplusSolarLegend,
+          surplusItems,
+          summary.totalSurplusSolarKwh,
+        );
+      }
+
+      /* =====================================================
+       MAIN ECHARTS CHART
+       ===================================================== */
+
+      function createSeriesData(records, propertyName) {
+        return records.map((record) => [
+          record.timestamp,
+          record[propertyName],
+        ]);
+      }
+
+      function formatMainChartTooltip(params) {
+        if (!params?.length) {
+          return "";
+        }
+
+        const timestamp = params[0].value[0];
+
+        const date = new Date(timestamp);
+
+        const rows = params
+          .map((parameter) => {
+            const value = Array.isArray(parameter.value)
+              ? parameter.value[1]
+              : parameter.value;
+
+            const unit = parameter.seriesName === "SOC" ? "%" : " kW";
+
+            return `
+              <div
+                style="
+                  display:grid;
+                  grid-template-columns:12px 1fr auto;
+                  align-items:center;
+                  gap:8px;
+                  margin-top:5px;
+                "
+              >
+                <span
+                  style="
+                    width:8px;
+                    height:8px;
+                    border-radius:50%;
+                    background:${parameter.color};
+                  "
+                ></span>
+
+                <span>
+                  ${parameter.seriesName}
+                </span>
+
+                <strong>
+                  ${formatNumber(value, 2)}${unit}
+                </strong>
+              </div>
+            `;
+          })
+          .join("");
+
+        return `
+        <div
+          style="
+            min-width:260px;
+            color:#e2e8f0;
+          "
+        >
+          <div
+            style="
+              margin-bottom:7px;
+              color:#f8fafc;
+              font-weight:800;
+            "
+          >
+            ${formatDateTime(date)} UTC
+          </div>
+
+          ${rows}
+        </div>
+      `;
+      }
+
+      function renderMainTimeSeriesChart(records) {
+        if (!state.mainChart) {
+          state.mainChart = echarts.init(elements.mainTimeSeriesChart, null, {
+            renderer: "canvas",
+          });
+        }
+
+        const largeDataset = records.length > 3000;
+
+        const veryLargeDataset = records.length > 10000;
+
+        const hasGridCharge = records.some(
+          (record) => record.chargeFromGrid > 0,
+        );
+
+        const legendData = [
+          "Load",
+          "Solar after BESS Charging",
+          "BESS Charge",
+          "BESS Discharge",
+          "Available Solar Generation",
+          "Solar Curtailed",
+          "SOC",
+        ];
+
+        if (hasGridCharge) {
+          legendData.splice(3, 0, "BESS Charge from Grid");
+        }
+
+        const series = [
+          {
+            name: "Load",
+            type: "line",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "load"),
+
+            showSymbol: false,
+
+            sampling: largeDataset ? "lttb" : undefined,
+
+            progressive: veryLargeDataset ? 5000 : 0,
+
+            lineStyle: {
+              color: "#60a5fa",
+              width: 1.8,
+            },
+
+            areaStyle: {
+              color: "rgba(59,130,246,0.24)",
+            },
+
+            itemStyle: {
+              color: "#60a5fa",
+            },
+
+            z: 1,
+          },
+
+          {
+            name: "Solar after BESS Charging",
+
+            type: "line",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "solarAfterCharging"),
+
+            showSymbol: false,
+
+            sampling: largeDataset ? "lttb" : undefined,
+
+            progressive: veryLargeDataset ? 5000 : 0,
+
+            lineStyle: {
+              color: "#22c55e",
+              width: 1.8,
+            },
+
+            areaStyle: {
+              color: "rgba(34,197,94,0.24)",
+            },
+
+            itemStyle: {
+              color: "#22c55e",
+            },
+
+            z: 2,
+          },
+
+          {
+            name: "BESS Charge",
+            type: "bar",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "bessCharge"),
+
+            large: largeDataset,
+            largeThreshold: 2000,
+
+            barMaxWidth: 9,
+            barMinWidth: 1,
+
+            itemStyle: {
+              color: "#f59e0b",
+              opacity: 0.88,
+            },
+
+            z: 3,
+          },
+        ];
+
+        if (hasGridCharge) {
+          series.push({
+            name: "BESS Charge from Grid",
+
+            type: "bar",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "chargeFromGrid"),
+
+            large: largeDataset,
+            largeThreshold: 2000,
+
+            barMaxWidth: 9,
+            barMinWidth: 1,
+
+            itemStyle: {
+              color: "#8b5cf6",
+              opacity: 0.88,
+            },
+
+            z: 4,
+          });
+        }
+
+        series.push(
+          {
+            name: "BESS Discharge",
+            type: "bar",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "bessDischarge"),
+
+            large: largeDataset,
+            largeThreshold: 2000,
+
+            barMaxWidth: 9,
+            barMinWidth: 1,
+
+            itemStyle: {
+              color: "#ef4444",
+              opacity: 0.88,
+            },
+
+            z: 5,
+          },
+
+          {
+            name: "Available Solar Generation",
+
+            type: "line",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "solarAdjusted"),
+
+            showSymbol: false,
+
+            sampling: largeDataset ? "lttb" : undefined,
+
+            progressive: veryLargeDataset ? 5000 : 0,
+
+            lineStyle: {
+              color: "#facc15",
+              width: 2,
+              type: "dashed",
+            },
+
+            itemStyle: {
+              color: "#facc15",
+            },
+
+            z: 6,
+          },
+
+          {
+            name: "Solar Curtailed",
+            type: "line",
+            yAxisIndex: 0,
+
+            data: createSeriesData(records, "solarCurtailed"),
+
+            showSymbol: false,
+
+            sampling: largeDataset ? "lttb" : undefined,
+
+            progressive: veryLargeDataset ? 5000 : 0,
+
+            lineStyle: {
+              color: "#fb7185",
+              width: 1.6,
+              type: "dotted",
+            },
+
+            itemStyle: {
+              color: "#fb7185",
+            },
+
+            z: 6,
+          },
+
+          {
+            name: "SOC",
+            type: "line",
+            yAxisIndex: 1,
+
+            data: createSeriesData(records, "socPercent"),
+
+            showSymbol: false,
+
+            sampling: largeDataset ? "lttb" : undefined,
+
+            progressive: veryLargeDataset ? 5000 : 0,
+
+            lineStyle: {
+              color: "#2dd4bf",
+              width: 1.2,
+            },
+
+            itemStyle: {
+              color: "#2dd4bf",
+            },
+
+            z: 7,
+          },
+        );
+
+        const option = {
+          backgroundColor: "transparent",
+
+          animation: !largeDataset,
+
+          animationDuration: largeDataset ? 0 : 500,
+
+          legend: {
+            type: "scroll",
+            left: "center",
+            bottom: 2,
+
+            textStyle: {
+              color: "#cbd5e1",
+              fontSize: 11,
+            },
+
+            pageTextStyle: {
+              color: "#94a3b8",
+            },
+
+            data: legendData,
+          },
+
+          grid: {
+            top: 38,
+            left: 70,
+            right: 72,
+            bottom: 95,
+          },
+
+          tooltip: {
+            trigger: "axis",
+            confine: true,
+
+            axisPointer: {
+              type: "cross",
+
+              lineStyle: {
+                color: "rgba(148,163,184,0.55)",
+
+                width: 1,
+                type: "dashed",
+              },
+
+              crossStyle: {
+                color: "rgba(148,163,184,0.55)",
+              },
+            },
+
+            backgroundColor: "rgba(8,17,30,0.97)",
+
+            borderColor: "rgba(96,165,250,0.35)",
+
+            borderWidth: 1,
+
+            extraCssText:
+              "border-radius:10px;" +
+              "box-shadow:0 12px 28px rgba(0,0,0,0.35);",
+
+            formatter: formatMainChartTooltip,
+          },
+
+          toolbox: {
+            right: 8,
+            top: 0,
+
+            iconStyle: {
+              borderColor: "#94a3b8",
+            },
+
+            emphasis: {
+              iconStyle: {
+                borderColor: "#60a5fa",
+              },
+            },
+
+            feature: {
+              dataZoom: {
+                yAxisIndex: "none",
+              },
+
+              restore: {},
+
+              saveAsImage: {
+                backgroundColor: "#0f172a",
+                pixelRatio: 2,
+              },
+            },
+          },
+
+          xAxis: {
+            type: "time",
+
+            axisLabel: {
+              color: "#94a3b8",
+              hideOverlap: true,
+
+              formatter(value) {
+                return formatAxisDateTime(new Date(value));
+              },
+            },
+
+            axisLine: {
+              lineStyle: {
+                color: "#475569",
+              },
+            },
+
+            splitLine: {
+              show: true,
+
+              lineStyle: {
+                color: "rgba(148,163,184,0.10)",
+
+                type: "dashed",
+              },
+            },
+          },
+
+          yAxis: [
+            {
+              type: "value",
+              name: "Power (kW)",
+              min: 0,
+
+              nameTextStyle: {
+                color: "#94a3b8",
+                padding: [0, 0, 8, 0],
+              },
+
+              axisLabel: {
+                color: "#94a3b8",
+
+                formatter(value) {
+                  return formatNumber(value, 0);
+                },
+              },
+
+              axisLine: {
+                show: true,
+
+                lineStyle: {
+                  color: "#475569",
+                },
+              },
+
+              splitLine: {
+                lineStyle: {
+                  color: "rgba(148,163,184,0.10)",
+
+                  type: "dashed",
+                },
+              },
+            },
+
+            {
+              type: "value",
+              name: "SOC (%)",
+              min: 0,
+              max: 100,
+
+              nameTextStyle: {
+                color: "#2dd4bf",
+                padding: [0, 0, 8, 0],
+              },
+
+              axisLabel: {
+                color: "#2dd4bf",
+
+                formatter(value) {
+                  return `${formatNumber(value, 0)}%`;
+                },
+              },
+
+              axisLine: {
+                show: true,
+
+                lineStyle: {
+                  color: "#2dd4bf",
+                },
+              },
+
+              splitLine: {
+                show: false,
+              },
+            },
+          ],
+
+          dataZoom: [
+            {
+              type: "inside",
+              xAxisIndex: 0,
+              filterMode: "none",
+
+              zoomOnMouseWheel: true,
+              moveOnMouseMove: true,
+              moveOnMouseWheel: false,
+            },
+
+            {
+              type: "slider",
+              xAxisIndex: 0,
+
+              bottom: 38,
+              height: 18,
+
+              borderColor: "rgba(148,163,184,0.18)",
+
+              backgroundColor: "rgba(15,23,42,0.7)",
+
+              fillerColor: "rgba(59,130,246,0.18)",
+
+              handleStyle: {
+                color: "#3b82f6",
+                borderColor: "#60a5fa",
+              },
+
+              textStyle: {
+                color: "#94a3b8",
+              },
+            },
+          ],
+
+          series,
+        };
+
+        state.mainChart.setOption(option, true);
+      }
+
+      /* =====================================================
+       DOWNSAMPLING FOR SMALL CHART.JS CHARTS
+
+       Calculations always use the full dataset.
+       Only visual rendering is downsampled.
+       ===================================================== */
+
+      function downsampleRecords(records, maxPoints = 2500) {
+        if (records.length <= maxPoints) {
+          return [...records];
+        }
+
+        const sampledRecords = [];
+        const step = records.length / maxPoints;
+
+        for (let index = 0; index < maxPoints; index += 1) {
+          sampledRecords.push(records[Math.floor(index * step)]);
+        }
+
+        const lastRecord = records[records.length - 1];
+
+        if (sampledRecords[sampledRecords.length - 1] !== lastRecord) {
+          sampledRecords.push(lastRecord);
+        }
+
+        return sampledRecords;
+      }
+
+      /* =====================================================
+       SMALL CHART.JS CHARTS
+       ===================================================== */
+
+      Chart.defaults.color = "#94a3b8";
+
+      Chart.defaults.borderColor = "rgba(148,163,184,0.12)";
+
+      Chart.defaults.font.family =
+        "Inter, ui-sans-serif, system-ui, " +
+        "-apple-system, BlinkMacSystemFont, " +
+        '"Segoe UI", sans-serif';
+
+      function createSmallChartOptions(
+        yAxisTitle,
+        chartRecords,
+        isPercent = false,
+      ) {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          normalized: true,
+
+          interaction: {
+            mode: "index",
+            intersect: false,
+          },
+
+          animation: {
+            duration: chartRecords.length > 1500 ? 0 : 450,
+          },
+
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+
+              labels: {
+                usePointStyle: true,
+                pointStyle: "circle",
+                padding: 18,
+                boxWidth: 8,
+                boxHeight: 8,
+                color: "#cbd5e1",
+              },
+            },
+
+            tooltip: {
+              enabled: true,
+
+              backgroundColor: "rgba(15,23,42,0.97)",
+
+              titleColor: "#f8fafc",
+              bodyColor: "#e2e8f0",
+
+              borderColor: "rgba(96,165,250,0.35)",
+
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+
+              callbacks: {
+                title(context) {
+                  const record = chartRecords[context[0]?.dataIndex];
+
+                  return record ? `${formatDateTime(record.date)} UTC` : "";
+                },
+
+                label(context) {
+                  const value = context.parsed.y ?? 0;
+
+                  return (
+                    `${context.dataset.label}: ` +
+                    `${formatNumber(value, 2)}` +
+                    `${isPercent ? "%" : " kW"}`
+                  );
+                },
+              },
+            },
+          },
+
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+
+              ticks: {
+                color: "#94a3b8",
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 12,
+              },
+            },
+
+            y: {
+              beginAtZero: true,
+
+              min: isPercent ? 0 : undefined,
+
+              max: isPercent ? 100 : undefined,
+
+              grid: {
+                color: "rgba(148,163,184,0.10)",
+              },
+
+              title: {
+                display: true,
+                text: yAxisTitle,
+                color: "#94a3b8",
+              },
+
+              ticks: {
+                color: "#94a3b8",
+
+                callback(value) {
+                  return (
+                    `${formatNumber(value, 0)}` + `${isPercent ? "%" : ""}`
+                  );
+                },
+              },
+            },
+          },
+        };
+      }
+
+      function createLineDataset(label, values, color, options = {}) {
+        return {
+          label,
+          data: values,
+
+          borderColor: color,
+
+          backgroundColor: options.backgroundColor || color,
+
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+
+          borderWidth: options.borderWidth || 2,
+
+          borderDash: options.borderDash || [],
+
+          tension: 0.18,
+
+          fill: Boolean(options.fill),
+        };
+      }
+
+      function destroySmallCharts() {
+        Object.values(state.smallCharts).forEach((chart) => {
+          chart?.destroy();
+        });
+
+        state.smallCharts = {};
+      }
+
+      function renderSmallCharts(records) {
+        destroySmallCharts();
+
+        const chartRecords = downsampleRecords(records, 2500);
+
+        const labels = chartRecords.map((record) => formatTime(record.date));
+
+        state.smallCharts.power = new Chart(
+          document.getElementById("powerChart"),
+          {
+            type: "line",
+
+            data: {
+              labels,
+
+              datasets: [
+                createLineDataset(
+                  "Load",
+                  chartRecords.map((record) => record.load),
+                  "#3b82f6",
+                ),
+
+                createLineDataset(
+                  "Available Solar Generation",
+                  chartRecords.map((record) => record.solarAdjusted),
+                  "#facc15",
+                  {
+                    borderDash: [6, 4],
+                  },
+                ),
+
+                createLineDataset(
+                  "BESS Discharge",
+                  chartRecords.map((record) => record.bessDischarge),
+                  "#ef4444",
+                ),
+              ],
+            },
+
+            options: createSmallChartOptions("Power (kW)", chartRecords),
+          },
+        );
+
+        state.smallCharts.soc = new Chart(document.getElementById("socChart"), {
+          type: "line",
+
+          data: {
+            labels,
+
+            datasets: [
+              createLineDataset(
+                "SOC",
+                chartRecords.map((record) => record.socPercent),
+                "#2dd4bf",
+                {
+                  fill: true,
+
+                  backgroundColor: "rgba(45,212,191,0.18)",
+                },
+              ),
+            ],
+          },
+
+          options: createSmallChartOptions("SOC (%)", chartRecords, true),
+        });
+
+        state.smallCharts.bessPower = new Chart(
+          document.getElementById("bessPowerChart"),
+          {
+            type: "bar",
+
+            data: {
+              labels,
+
+              datasets: [
+                {
+                  label: "BESS Charge",
+
+                  data: chartRecords.map((record) => record.bessCharge),
+
+                  backgroundColor: "rgba(245,158,11,0.78)",
+
+                  borderColor: "#f59e0b",
+
+                  borderWidth: 1,
+                  borderRadius: 2,
+                },
+
+                {
+                  label: "BESS Discharge",
+
+                  data: chartRecords.map((record) => record.bessDischarge),
+
+                  backgroundColor: "rgba(239,68,68,0.78)",
+
+                  borderColor: "#ef4444",
+
+                  borderWidth: 1,
+                  borderRadius: 2,
+                },
+              ],
+            },
+
+            options: createSmallChartOptions("Power (kW)", chartRecords),
+          },
+        );
+
+        state.smallCharts.solar = new Chart(
+          document.getElementById("solarChart"),
+          {
+            type: "line",
+
+            data: {
+              labels,
+
+              datasets: [
+                createLineDataset(
+                  "SolarAdjusted",
+                  chartRecords.map((record) => record.solarAdjusted),
+                  "#facc15",
+                ),
+
+                createLineDataset(
+                  "SolarCurtailed",
+                  chartRecords.map((record) => record.solarCurtailed),
+                  "#fb7185",
+                ),
+
+                createLineDataset(
+                  "Solar after BESS Charging",
+                  chartRecords.map((record) => record.solarAfterCharging),
+                  "#22c55e",
+                ),
+              ],
+            },
+
+            options: createSmallChartOptions("Power (kW)", chartRecords),
+          },
+        );
+      }
+
+      /* =====================================================
+       DATE FILTER
+       ===================================================== */
+
+      function populateDateFilter(records) {
+        const uniqueDateKeys = [
+          ...new Set(records.map((record) => record.dateKey)),
+        ];
+
+        elements.dateFilter.innerHTML = [
+          '<option value="all">All dates</option>',
+
+          ...uniqueDateKeys.map((dateKey) => {
+            const sampleRecord = records.find(
+              (record) => record.dateKey === dateKey,
+            );
+
+            return `
+              <option value="${dateKey}">
+                ${formatDate(sampleRecord.date)}
+              </option>
+            `;
+          }),
+        ].join("");
+      }
+
+      function updateDateSummary(records) {
+        elements.recordCount.textContent = formatNumber(records.length, 0);
+
+        if (!records.length) {
+          elements.dateRange.textContent = "No data";
+
+          return;
+        }
+
+        const firstDate = records[0].date;
+
+        const lastDate = records[records.length - 1].date;
+
+        if (formatDateKey(firstDate) === formatDateKey(lastDate)) {
+          elements.dateRange.textContent = formatDate(firstDate);
+        } else {
+          elements.dateRange.textContent =
+            `${formatDate(firstDate)} – ` + `${formatDate(lastDate)}`;
+        }
+      }
+
+      function applyDateFilter() {
+        state.selectedDate = elements.dateFilter.value;
+
+        state.dateFilteredRecords =
+          state.selectedDate === "all"
+            ? [...state.allRecords]
+            : state.allRecords.filter(
+                (record) => record.dateKey === state.selectedDate,
+              );
+
+        state.currentPage = 1;
+
+        updateDateSummary(state.dateFilteredRecords);
+
+        renderKpis(state.dateFilteredRecords);
+
+        renderMainTimeSeriesChart(state.dateFilteredRecords);
+
+        renderSmallCharts(state.dateFilteredRecords);
+
+        /*
+         * Year 1 utilization remains calculated from the entire
+         * original dataset, not only the selected date.
+         */
+        renderSolarUtilization(state.allRecords);
+
+        applyTableFilters();
+      }
+
+      /* =====================================================
+       TABLE SEARCH / SORT
+       ===================================================== */
+
+      function recordMatchesSearch(record, normalizedSearchTerm) {
+        if (!normalizedSearchTerm) {
+          return true;
+        }
+
+        const searchableValues = [
+          formatDate(record.date),
+          formatTime(record.date),
+          formatDateTime(record.date),
+
+          record.load,
+          record.solarAdjusted,
+          record.solarCurtailed,
+          record.bessCharge,
+          record.bessDischarge,
+          record.socKwh,
+          record.socPercent,
+        ];
+
+        return searchableValues.some((value) =>
+          String(value).toLowerCase().includes(normalizedSearchTerm),
+        );
+      }
+
+      function sortRecords(records) {
+        const sortedRecords = [...records];
+
+        const directionMultiplier = state.sortDirection === "asc" ? 1 : -1;
+
+        sortedRecords.sort((firstRecord, secondRecord) => {
+          let firstValue = firstRecord[state.sortKey];
+
+          let secondValue = secondRecord[state.sortKey];
+
+          if (state.sortKey === "date") {
+            firstValue = firstRecord.timestamp;
+
+            secondValue = secondRecord.timestamp;
+          }
+
+          if (firstValue < secondValue) {
+            return -1 * directionMultiplier;
+          }
+
+          if (firstValue > secondValue) {
+            return 1 * directionMultiplier;
+          }
+
+          return (
+            (firstRecord.sourceIndex - secondRecord.sourceIndex) *
+            directionMultiplier
+          );
+        });
+
+        return sortedRecords;
+      }
+
+      function applyTableFilters() {
+        const normalizedSearchTerm = state.searchTerm.trim().toLowerCase();
+
+        const searchedRecords = state.dateFilteredRecords.filter((record) =>
+          recordMatchesSearch(record, normalizedSearchTerm),
+        );
+
+        state.tableFilteredRecords = sortRecords(searchedRecords);
+
+        const totalPages = Math.max(
+          1,
+          Math.ceil(state.tableFilteredRecords.length / state.pageSize),
+        );
+
+        if (state.currentPage > totalPages) {
+          state.currentPage = totalPages;
+        }
+
+        renderTable();
+        renderSortIndicators();
+      }
+
+      function handleSort(sortKey) {
+        if (state.sortKey === sortKey) {
+          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = sortKey;
+          state.sortDirection = "asc";
+        }
+
+        state.currentPage = 1;
+
+        applyTableFilters();
+      }
+
+      function renderSortIndicators() {
+        elements.sortableHeaders.forEach((header) => {
+          const indicator = header.querySelector(".sort-indicator");
+
+          if (!indicator) {
+            return;
+          }
+
+          indicator.textContent =
+            header.dataset.sortKey === state.sortKey
+              ? state.sortDirection === "asc"
+                ? "▲"
+                : "▼"
+              : "";
+        });
+      }
+
+      /* =====================================================
+       TABLE
+       ===================================================== */
+
+      function renderSocCell(socPercent) {
+        const boundedSoc = Math.max(0, Math.min(100, socPercent));
+
+        return `
+        <div class="soc-cell">
+          <span class="soc-value">
+            ${formatPercent(socPercent)}
+          </span>
+
+          <span class="soc-bar">
+            <span
+              class="soc-bar-fill"
+              style="width:${boundedSoc}%"
+            ></span>
+          </span>
+        </div>
+      `;
+      }
+
+      function renderTable() {
+        const totalRecords = state.tableFilteredRecords.length;
+
+        const totalPages = Math.max(
+          1,
+          Math.ceil(totalRecords / state.pageSize),
+        );
+
+        const startIndex = (state.currentPage - 1) * state.pageSize;
+
+        const endIndex = Math.min(startIndex + state.pageSize, totalRecords);
+
+        const pageRecords = state.tableFilteredRecords.slice(
+          startIndex,
+          endIndex,
+        );
+
+        if (!pageRecords.length) {
+          elements.tableBody.innerHTML = `
+          <tr>
+            <td
+              colspan="8"
+              class="empty-table"
+            >
+              No matching records found.
+            </td>
+          </tr>
+        `;
+        } else {
+          elements.tableBody.innerHTML = pageRecords
+            .map(
+              (record) => `
+                <tr>
+                  <td>
+                    ${formatDateTime(record.date)} UTC
+                  </td>
+
+                  <td>
+                    ${formatPower(record.load)}
+                  </td>
+
+                  <td>
+                    ${formatPower(record.solarAdjusted)}
+                  </td>
+
+                  <td>
+                    ${formatPower(record.solarCurtailed)}
+                  </td>
+
+                  <td>
+                    ${formatPower(record.bessCharge)}
+                  </td>
+
+                  <td>
+                    ${formatPower(record.bessDischarge)}
+                  </td>
+
+                  <td>
+                    ${formatEnergy(record.socKwh)}
+                  </td>
+
+                  <td>
+                    ${renderSocCell(record.socPercent)}
+                  </td>
+                </tr>
+              `,
+            )
+            .join("");
+        }
+
+        elements.tableInfo.textContent =
+          totalRecords === 0
+            ? "Showing 0 records"
+            : `Showing ` +
+              `${formatNumber(startIndex + 1, 0)}–` +
+              `${formatNumber(endIndex, 0)} of ` +
+              `${formatNumber(totalRecords, 0)} records`;
+
+        renderPagination(totalPages);
+      }
+
+      /* =====================================================
+       PAGINATION
+       ===================================================== */
+
+      function getVisiblePageNumbers(currentPage, totalPages) {
+        if (totalPages <= 7) {
+          return Array.from(
+            {
+              length: totalPages,
+            },
+            (_, index) => index + 1,
+          );
+        }
+
+        const pages = [1];
+
+        if (currentPage > 4) {
+          pages.push("ellipsis-start");
+        }
+
+        const rangeStart = Math.max(2, currentPage - 1);
+
+        const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
+
+        for (let page = rangeStart; page <= rangeEnd; page += 1) {
+          pages.push(page);
+        }
+
+        if (currentPage < totalPages - 3) {
+          pages.push("ellipsis-end");
+        }
+
+        pages.push(totalPages);
+
+        return pages;
+      }
+
+      function createPageButton(label, page, options = {}) {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "page-button";
+
+        button.textContent = label;
+
+        button.disabled = Boolean(options.disabled);
+
+        if (options.active) {
+          button.classList.add("active");
+        }
+
+        button.addEventListener("click", () => {
+          state.currentPage = page;
+
+          renderTable();
+        });
+
+        return button;
+      }
+
+      function renderPagination(totalPages) {
+        elements.pagination.innerHTML = "";
+
+        elements.pagination.appendChild(
+          createPageButton("‹", Math.max(1, state.currentPage - 1), {
+            disabled: state.currentPage === 1,
+          }),
+        );
+
+        const visiblePages = getVisiblePageNumbers(
+          state.currentPage,
+          totalPages,
+        );
+
+        visiblePages.forEach((pageItem) => {
+          if (typeof pageItem === "string") {
+            const ellipsis = document.createElement("span");
+
+            ellipsis.className = "page-ellipsis";
+
+            ellipsis.textContent = "…";
+
+            elements.pagination.appendChild(ellipsis);
+
+            return;
+          }
+
+          elements.pagination.appendChild(
+            createPageButton(String(pageItem), pageItem, {
+              active: pageItem === state.currentPage,
+            }),
+          );
+        });
+
+        elements.pagination.appendChild(
+          createPageButton("›", Math.min(totalPages, state.currentPage + 1), {
+            disabled: state.currentPage === totalPages,
+          }),
+        );
+      }
+
+      /* =====================================================
+       UI STATES
+       ===================================================== */
+
+      function showLoadingState() {
+        elements.loadingPanel.classList.add("active");
+
+        elements.errorPanel.classList.remove("active");
+
+        elements.dashboardContent.classList.remove("active");
+      }
+
+      function showDashboardState() {
+        elements.loadingPanel.classList.remove("active");
+
+        elements.errorPanel.classList.remove("active");
+
+        elements.dashboardContent.classList.add("active");
+
+        requestAnimationFrame(() => {
+          state.mainChart?.resize();
+        });
+      }
+
+      function showErrorState(error) {
+        elements.loadingPanel.classList.remove("active");
+
+        elements.dashboardContent.classList.remove("active");
+
+        elements.errorPanel.classList.add("active");
+
+        elements.errorMessage.textContent =
+          `${error.message} ` +
+          `Make sure chart.json is located in the same folder ` +
+          `as index.html and open the dashboard through a local web server.`;
+      }
+
+      /* =====================================================
+       LOAD JSON
+       ===================================================== */
+
+      async function loadDashboardData() {
+        showLoadingState();
+
+        try {
+          const response = await fetch("chart.json", {
+            cache: "no-store",
+          });
+
+          if (!response.ok) {
+            throw new Error(
+              `HTTP ${response.status}: ` + `${response.statusText}`,
+            );
+          }
+
+          const rawData = await response.json();
+
+          const normalizedRecords = normalizeRecords(rawData);
+
+          state.allRecords = normalizedRecords;
+
+          state.dateFilteredRecords = [...normalizedRecords];
+
+          state.tableFilteredRecords = [...normalizedRecords];
+
+          state.medianTimestepHours =
+            calculateMedianTimestepHours(normalizedRecords);
+
+          state.currentPage = 1;
+          state.selectedDate = "all";
+
+          populateDateFilter(state.allRecords);
+
+          elements.dateFilter.value = "all";
+
+          elements.timestepValue.textContent =
+            state.medianTimestepHours < 1
+              ? `${formatNumber(state.medianTimestepHours * 60, 2)} min`
+              : `${formatNumber(state.medianTimestepHours, 2)} h`;
+
+          updateDateSummary(state.dateFilteredRecords);
+
+          renderKpis(state.dateFilteredRecords);
+
+          renderMainTimeSeriesChart(state.dateFilteredRecords);
+
+          renderSolarUtilization(state.allRecords);
+
+          renderSmallCharts(state.dateFilteredRecords);
+
+          applyTableFilters();
+
+          showDashboardState();
+        } catch (error) {
+          console.error("Dashboard loading error:", error);
+
+          showErrorState(error);
+        }
+      }
+
+      /* =====================================================
+       EVENTS
+       ===================================================== */
+
+      elements.dateFilter.addEventListener("change", applyDateFilter);
+
+      elements.searchInput.addEventListener("input", (event) => {
+        state.searchTerm = event.target.value;
+
+        state.currentPage = 1;
+
+        applyTableFilters();
+      });
+
+      elements.pageSizeSelect.addEventListener("change", (event) => {
+        state.pageSize = Number(event.target.value);
+
+        state.currentPage = 1;
+
+        renderTable();
+      });
+
+      elements.sortableHeaders.forEach((header) => {
+        header.addEventListener("click", () => {
+          handleSort(header.dataset.sortKey);
+        });
+      });
+
+      elements.retryButton.addEventListener("click", loadDashboardData);
+
+      elements.resetMainChartZoom.addEventListener("click", () => {
+        if (!state.mainChart) {
+          return;
+        }
+
+        state.mainChart.dispatchAction({
+          type: "dataZoom",
+          start: 0,
+          end: 100,
+        });
+      });
+
+      window.addEventListener("resize", () => {
+        state.mainChart?.resize();
+      });
+
+      /* =====================================================
+       START
+       ===================================================== */
+
+      loadDashboardData();
+    </script>
+  </body>
+</html>

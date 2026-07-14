@@ -1,0 +1,1562 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Battery Energy Storage System Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <style>
+      /* ======================= RESET & BASE ======================= */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        background: #0f172a;
+        color: #f1f5f9;
+        padding: 24px;
+        min-height: 100vh;
+      }
+      h1,
+      h2,
+      h3 {
+        font-weight: 600;
+      }
+
+      /* ======================= HEADER ======================= */
+      .header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #1e293b, #16213a);
+        border-radius: 16px;
+        padding: 22px 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        border: 1px solid #263349;
+      }
+      .header-title {
+        font-size: 24px;
+        color: #fff;
+      }
+      .header-title span {
+        display: block;
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: 400;
+        margin-top: 4px;
+      }
+      .header-meta {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .header-meta div {
+        text-align: right;
+      }
+      .header-meta .label {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .header-meta .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: #3b82f6;
+      }
+
+      /* ======================= KPI GRID ======================= */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+      .kpi-card {
+        background: #1e293b;
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        border: 1px solid #263349;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+      }
+      .kpi-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+      .kpi-text .kpi-title {
+        font-size: 12px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .kpi-text .kpi-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        margin-top: 2px;
+      }
+      .kpi-text .kpi-value small {
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: 400;
+        margin-left: 4px;
+      }
+
+      .icon-blue {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+      }
+      .icon-green {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+      }
+      .icon-orange {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+      }
+      .icon-red {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+      }
+
+      /* ======================= SOLAR UTILIZATION SECTION ======================= */
+      .section-title {
+        font-size: 18px;
+        color: #fff;
+        margin-bottom: 2px;
+      }
+      .section-sub {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 16px;
+      }
+      .solar-util-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 20px;
+        margin-bottom: 28px;
+      }
+      .solar-card {
+        background: #1e293b;
+        border-radius: 16px;
+        padding: 22px;
+        border: 1px solid #263349;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      }
+      .solar-card h3 {
+        font-size: 15px;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+      .solar-card .subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 20px;
+      }
+      .solar-card-body {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        flex-wrap: wrap;
+      }
+      .donut-wrap {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        flex-shrink: 0;
+      }
+      .solar-legend {
+        flex: 1;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .solar-legend-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .solar-legend-row .left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #cbd5e1;
+      }
+      .solar-legend-row .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .solar-legend-row .right {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+      }
+      .solar-legend-row .val {
+        font-weight: 700;
+        color: #fff;
+      }
+      .solar-legend-row .pct {
+        font-weight: 700;
+      }
+
+      /* ======================= CHART GRID (4 base charts) ======================= */
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+        gap: 20px;
+        margin-bottom: 28px;
+      }
+      .chart-card {
+        background: #1e293b;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        border: 1px solid #263349;
+      }
+      .chart-card h3 {
+        font-size: 15px;
+        margin-bottom: 14px;
+        color: #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chart-card .chart-wrap {
+        position: relative;
+        height: 300px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      /* ======================= MAIN CHART SECTION ======================= */
+      .main-chart-card {
+        background: #1e293b;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid #263349;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        margin-bottom: 28px;
+      }
+      .main-chart-card h3 {
+        font-size: 15px;
+        color: #fff;
+        margin-bottom: 2px;
+      }
+      .main-chart-card .subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 10px;
+      }
+      #mainChartEcharts {
+        width: 100%;
+        height: 480px;
+      }
+
+      /* ======================= TABLE ======================= */
+      .table-card {
+        background: #1e293b;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        border: 1px solid #263349;
+      }
+      .table-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .table-toolbar input {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #fff;
+        padding: 9px 14px;
+        border-radius: 8px;
+        font-size: 14px;
+        width: 240px;
+        outline: none;
+      }
+      .table-toolbar input:focus {
+        border-color: #3b82f6;
+      }
+      .table-scroll {
+        max-height: 500px;
+        overflow: auto;
+        border-radius: 10px;
+        border: 1px solid #263349;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        min-width: 1000px;
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        background: #0f172a;
+        color: #94a3b8;
+        text-align: left;
+        padding: 12px 14px;
+        cursor: pointer;
+        user-select: none;
+        border-bottom: 2px solid #334155;
+        white-space: nowrap;
+        z-index: 2;
+      }
+      thead th:hover {
+        color: #3b82f6;
+      }
+      thead th .arrow {
+        font-size: 10px;
+        margin-left: 4px;
+        opacity: 0.6;
+      }
+      tbody td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #263349;
+        white-space: nowrap;
+      }
+      tbody tr:hover {
+        background: rgba(59, 130, 246, 0.08);
+      }
+      .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      .pagination button {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        padding: 7px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .pagination button.active {
+        background: #3b82f6;
+        border-color: #3b82f6;
+        color: #fff;
+      }
+      .pagination button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .pagination button:hover:not(:disabled):not(.active) {
+        border-color: #3b82f6;
+        color: #3b82f6;
+      }
+      .page-info {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 0 8px;
+      }
+
+      #loadingMsg,
+      #errorMsg {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+        font-size: 15px;
+      }
+      #errorMsg {
+        color: #ef4444;
+        display: none;
+      }
+
+      @media (max-width: 640px) {
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 14px;
+        }
+        .header-meta {
+          width: 100%;
+          justify-content: space-between;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======================= HEADER ======================= -->
+    <div class="header">
+      <div class="header-title">
+        ⚡ Battery Energy Storage System Dashboard
+        <span>Giám sát vận hành hệ thống lưu trữ năng lượng pin (BESS)</span>
+      </div>
+      <div class="header-meta">
+        <div>
+          <div class="label">SELECTED DATE RANGE</div>
+          <div class="value" id="selectedDate">--</div>
+        </div>
+        <div>
+          <div class="label">TOTAL RECORDS</div>
+          <div class="value" id="totalRecords">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingMsg">Đang tải dữ liệu từ chart.json...</div>
+    <div id="errorMsg">
+      ⚠ Không thể tải chart.json. Vui lòng kiểm tra file có tồn tại cùng thư mục
+      với index.html.
+    </div>
+
+    <div id="dashboardContent" style="display: none">
+      <!-- ======================= KPI SECTION ======================= -->
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- ======================= SOLAR UTILIZATION SECTION ======================= -->
+      <div class="section-title">Solar Utilization – Year 1</div>
+      <div class="section-sub">
+        Donut charts use Year 1 summary values only.
+      </div>
+      <div class="solar-util-grid">
+        <div class="solar-card">
+          <h3>Solar Generation Utilization</h3>
+          <div class="subtitle" id="solarGenSubtitle">
+            Total adjusted solar: -- kWh
+          </div>
+          <div class="solar-card-body">
+            <div class="donut-wrap"><canvas id="donutSolarGen"></canvas></div>
+            <div class="solar-legend" id="legendSolarGen"></div>
+          </div>
+        </div>
+        <div class="solar-card">
+          <h3>Surplus Solar Utilization</h3>
+          <div class="subtitle" id="surplusSolarSubtitle">
+            Total surplus solar after load: -- kWh
+          </div>
+          <div class="solar-card-body">
+            <div class="donut-wrap">
+              <canvas id="donutSurplusSolar"></canvas>
+            </div>
+            <div class="solar-legend" id="legendSurplusSolar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================= CHART SECTION (4 base charts) ======================= -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>
+            <span class="dot" style="background: #3b82f6"></span> Load /
+            Adjusted Solar / BESS Discharge theo thời gian
+          </h3>
+          <div class="chart-wrap"><canvas id="chartLine1"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>
+            <span class="dot" style="background: #22c55e"></span> State of
+            Charge (SOC) theo thời gian
+          </h3>
+          <div class="chart-wrap"><canvas id="chartArea"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>
+            <span class="dot" style="background: #f59e0b"></span> BESS Charge từ
+            Solar & Grid
+          </h3>
+          <div class="chart-wrap"><canvas id="chartStacked"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>
+            <span class="dot" style="background: #ef4444"></span> Adjusted Solar
+            trước và sau khi BESS sạc
+          </h3>
+          <div class="chart-wrap"><canvas id="chartLine2"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ======================= MAIN TIME-SERIES CHART ======================= -->
+      <div class="main-chart-card">
+        <h3>Main Chart – Year 1</h3>
+        <div class="subtitle">
+          Left axis: Power (kW). Right axis: SOC (%). Click legend items to hide
+          or show a series.
+        </div>
+        <div id="mainChartEcharts"></div>
+      </div>
+
+      <!-- ======================= TABLE SECTION ======================= -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>📋 Bảng dữ liệu chi tiết</h3>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="🔍 Tìm kiếm theo thời gian..."
+          />
+        </div>
+        <div class="table-scroll">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th data-key="date">Date <span class="arrow"></span></th>
+                <th data-key="time">Time <span class="arrow"></span></th>
+                <th data-key="Load (kW)">
+                  Load (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="SolarAdjusted (kW)">
+                  Solar Adjusted (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="SolarCurtailed (kW)">
+                  Solar Curtailed (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="BessChargeFromSolar (kW)">
+                  Charge from Solar (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="BessChargeFromGrid (kW)">
+                  Charge from Grid (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="BessDischarge (kW)">
+                  Discharge (kW) <span class="arrow"></span>
+                </th>
+                <th data-key="SOC (%)">SOC (%) <span class="arrow"></span></th>
+                <th data-key="SOC (kWh)">
+                  SOC (kWh) <span class="arrow"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <script>
+      /* =========================================================
+   GLOBAL STATE
+   ========================================================= */
+      let rawData = []; // Raw records from chart.json (keys normalized)
+      let cleanData = []; // Records with null values filtered out
+      let tableData = []; // Currently filtered/sorted data for the table
+      let currentPage = 1;
+      const ROWS_PER_PAGE = 15;
+      let sortKey = null;
+      let sortAsc = true;
+      let charts = {}; // Chart.js instances
+
+      let energyRecords = []; // Prepared/sorted dataset used for energy calcs & Main Chart
+      let timestepHours = 0.5; // Median timestep, computed dynamically
+
+      const COLORS = {
+        primary: "#3B82F6",
+        green: "#22C55E",
+        orange: "#F59E0B",
+        red: "#EF4444",
+        grid: "rgba(148,163,184,0.1)",
+        text: "#94A3B8",
+      };
+
+      /* =========================================================
+   FIELD NAME MAPPING (current chart.json schema)
+   =========================================================
+   Load (kW)                 -> Load
+   SolarAdjusted (kW)        -> Available Solar Generation (yellow dashed line)
+   SolarCurtailed (kW)       -> Solar after BESS Charging (green area)
+   BessChargeFromSolar (kW)  -> BESS Charge from Solar (orange bars)
+   BessChargeFromGrid (kW)   -> BESS Charge from Grid (purple bars)
+   BessDischarge (kW)        -> BESS Discharge (red bars)
+   SOC (%)                   -> SOC (teal line)
+   SOC (kWh)                 -> shown in table only
+   ========================================================= */
+
+      /* =========================================================
+   ENTRY POINT
+   ========================================================= */
+      document.addEventListener("DOMContentLoaded", init);
+
+      async function init() {
+        try {
+          const res = await fetch("chart.json");
+          if (!res.ok) throw new Error("Network response was not ok");
+          const json = await res.json();
+          if (!Array.isArray(json))
+            throw new Error("chart.json root is not an array");
+
+          // Normalize keys (trim stray whitespace, e.g. "SOC (%)   ")
+          rawData = json.map(normalizeKeys);
+
+          // Remove rows where Load is missing/null (used as the "row has data" indicator)
+          cleanData = rawData.filter(
+            (r) => r["Load (kW)"] !== null && r["Load (kW)"] !== undefined,
+          );
+
+          if (cleanData.length === 0)
+            throw new Error("No valid records found in chart.json");
+
+          document.getElementById("loadingMsg").style.display = "none";
+          document.getElementById("dashboardContent").style.display = "block";
+
+          renderHeader();
+        } catch (err) {
+          console.error("Lỗi tải chart.json:", err);
+          document.getElementById("loadingMsg").style.display = "none";
+          document.getElementById("errorMsg").style.display = "block";
+          return;
+        }
+
+        // Each section runs independently — a failure in one does not break the rest
+        try {
+          renderKPIs();
+        } catch (e) {
+          console.error("Lỗi KPI:", e);
+        }
+        try {
+          renderCharts();
+        } catch (e) {
+          console.error("Lỗi 4 charts:", e);
+        }
+        try {
+          initTable();
+        } catch (e) {
+          console.error("Lỗi Table:", e);
+        }
+        try {
+          energyRecords = prepareEnergyData(rawData);
+          timestepHours = computeMedianTimestepHours(energyRecords);
+          renderSolarUtilizationSection();
+          renderMainChart(energyRecords);
+        } catch (e) {
+          console.error("Lỗi Solar Utilization / Main Chart:", e);
+        }
+      }
+
+      /* =========================================================
+   HELPERS
+   ========================================================= */
+      // Trim whitespace from every key of an object (fixes keys like "SOC (%)   ")
+      function normalizeKeys(obj) {
+        const out = {};
+        Object.keys(obj).forEach((k) => {
+          out[k.trim()] = obj[k];
+        });
+        return out;
+      }
+
+      // Convert a DateTime value (epoch ms OR "YYYY-MM-DD HH:mm:ss" string) to a Date object.
+      // Epoch ms values are treated as UTC wall-clock time — i.e. "00:00:00" written in the
+      // source file must always display as "00:00", regardless of the browser's local timezone.
+      function toDate(value) {
+        if (typeof value === "number") {
+          const d = new Date(value);
+          return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+        }
+        return new Date(String(value).replace(" ", "T"));
+      }
+
+      // Extract "HH:MM" from a DateTime value
+      function toTimeLabel(value) {
+        const d = toDate(value);
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      // Extract "DD/MM/YYYY" from a DateTime value
+      function toDateLabel(value) {
+        const d = toDate(value);
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      function formatNumber(n, decimals = 1) {
+        if (n === null || n === undefined || isNaN(n)) return "-";
+        return Number(n).toLocaleString("en-US", {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        });
+      }
+
+      function formatEnergy(n) {
+        return Number(n || 0).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      // Generic aggregate helper: max / min / average over a numeric field, ignoring null
+      function aggregate(field, type) {
+        const values = cleanData
+          .map((r) => r[field])
+          .filter((v) => v !== null && v !== undefined && !isNaN(v));
+        if (values.length === 0) return 0;
+        if (type === "max") return Math.max(...values);
+        if (type === "min") return Math.min(...values);
+        if (type === "avg")
+          return values.reduce((a, b) => a + b, 0) / values.length;
+      }
+
+      /* =========================================================
+   HEADER RENDER
+   ========================================================= */
+      function renderHeader() {
+        if (cleanData.length === 0) return;
+        const firstDate = toDateLabel(cleanData[0].DateTime);
+        const lastDate = toDateLabel(cleanData[cleanData.length - 1].DateTime);
+        document.getElementById("selectedDate").textContent =
+          firstDate === lastDate ? firstDate : `${firstDate} → ${lastDate}`;
+        document.getElementById("totalRecords").textContent =
+          cleanData.length.toLocaleString("en-US");
+      }
+
+      /* =========================================================
+   KPI SECTION RENDER
+   ========================================================= */
+      function renderKPIs() {
+        const kpis = [
+          {
+            title: "Maximum Load",
+            value: aggregate("Load (kW)", "max"),
+            unit: "kW",
+            icon: "🔺",
+            cls: "icon-red",
+          },
+          {
+            title: "Minimum Load",
+            value: aggregate("Load (kW)", "min"),
+            unit: "kW",
+            icon: "🔻",
+            cls: "icon-blue",
+          },
+          {
+            title: "Average Load",
+            value: aggregate("Load (kW)", "avg"),
+            unit: "kW",
+            icon: "📊",
+            cls: "icon-blue",
+          },
+          {
+            title: "Max Adjusted Solar",
+            value: aggregate("SolarAdjusted (kW)", "max"),
+            unit: "kW",
+            icon: "☀️",
+            cls: "icon-orange",
+          },
+          {
+            title: "Max BESS Discharge",
+            value: aggregate("BessDischarge (kW)", "max"),
+            unit: "kW",
+            icon: "🔋",
+            cls: "icon-green",
+          },
+          {
+            title: "Maximum SOC",
+            value: aggregate("SOC (%)", "max"),
+            unit: "%",
+            icon: "⚡",
+            cls: "icon-green",
+          },
+          {
+            title: "Average SOC",
+            value: aggregate("SOC (%)", "avg"),
+            unit: "%",
+            icon: "📈",
+            cls: "icon-green",
+          },
+        ];
+
+        const grid = document.getElementById("kpiGrid");
+        grid.innerHTML = kpis
+          .map(
+            (k) => `
+    <div class="kpi-card">
+      <div class="kpi-icon ${k.cls}">${k.icon}</div>
+      <div class="kpi-text">
+        <div class="kpi-title">${k.title}</div>
+        <div class="kpi-value">${formatNumber(k.value)}<small>${k.unit}</small></div>
+      </div>
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      /* =========================================================
+   4 BASE CHARTS (Chart.js)
+   ========================================================= */
+      function renderCharts() {
+        const labels = cleanData.map((r) => toTimeLabel(r.DateTime));
+
+        Chart.defaults.color = COLORS.text;
+        Chart.defaults.font.family = "'Segoe UI', Roboto, Arial, sans-serif";
+
+        const commonOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 600, easing: "easeOutQuart" },
+          interaction: { mode: "index", intersect: false },
+          elements: { point: { radius: 0 } },
+          plugins: {
+            legend: { labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: {
+              backgroundColor: "#0F172A",
+              borderColor: "#334155",
+              borderWidth: 1,
+              padding: 10,
+              titleColor: "#fff",
+              bodyColor: "#E2E8F0",
+            },
+          },
+          scales: {
+            x: { grid: { color: COLORS.grid }, ticks: { maxTicksLimit: 12 } },
+            y: { grid: { color: COLORS.grid } },
+          },
+        };
+
+        // ---- Chart 1: Line — Load / Available Solar / BESS Discharge ----
+        charts.line1 = new Chart(document.getElementById("chartLine1"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Load (kW)",
+                data: cleanData.map((r) => r["Load (kW)"]),
+                borderColor: COLORS.primary,
+                backgroundColor: "transparent",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "Adjusted Solar (kW)",
+                data: cleanData.map((r) => r["SolarAdjusted (kW)"]),
+                borderColor: COLORS.orange,
+                backgroundColor: "transparent",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "BESS Discharge (kW)",
+                data: cleanData.map((r) => r["BessDischarge (kW)"]),
+                borderColor: COLORS.green,
+                backgroundColor: "transparent",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: commonOptions,
+        });
+
+        // ---- Chart 2: Area — SOC ----
+        charts.area = new Chart(document.getElementById("chartArea"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "SOC (%)",
+                data: cleanData.map((r) => r["SOC (%)"]),
+                borderColor: COLORS.green,
+                backgroundColor: "rgba(34,197,94,0.2)",
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: commonOptions,
+        });
+
+        // ---- Chart 3: Stacked Bar — BESS Charge from Solar / Grid ----
+        charts.stacked = new Chart(document.getElementById("chartStacked"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "BESS Charge from Solar (kW)",
+                data: cleanData.map((r) => r["BessChargeFromSolar (kW)"]),
+                backgroundColor: COLORS.orange,
+                borderRadius: 3,
+              },
+              {
+                label: "BESS Charge from Grid (kW)",
+                data: cleanData.map((r) => r["BessChargeFromGrid (kW)"]),
+                backgroundColor: COLORS.primary,
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            ...commonOptions,
+            scales: {
+              x: {
+                stacked: true,
+                grid: { color: COLORS.grid },
+                ticks: { maxTicksLimit: 12 },
+              },
+              y: { stacked: true, grid: { color: COLORS.grid } },
+            },
+          },
+        });
+
+        // ---- Chart 4: Line — Available Solar vs Solar after BESS Charging (mapped from SolarCurtailed) ----
+        charts.line2 = new Chart(document.getElementById("chartLine2"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Adjusted Solar (kW)",
+                data: cleanData.map((r) => r["SolarAdjusted (kW)"]),
+                borderColor: COLORS.orange,
+                backgroundColor: "transparent",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "Adjusted Solar after BESS Charging (kW)",
+                data: cleanData.map((r) => r["SolarCurtailed (kW)"]),
+                borderColor: COLORS.red,
+                backgroundColor: "transparent",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: commonOptions,
+        });
+      }
+
+      /* =========================================================
+   TABLE SECTION
+   ========================================================= */
+      function initTable() {
+        tableData = cleanData.map((r) => ({
+          ...r,
+          date: toDateLabel(r.DateTime),
+          time: toTimeLabel(r.DateTime),
+        }));
+
+        document
+          .getElementById("searchInput")
+          .addEventListener("input", onSearch);
+        document.querySelectorAll("#dataTable thead th").forEach((th) => {
+          th.addEventListener("click", () => onSort(th.dataset.key));
+        });
+
+        renderTable();
+      }
+
+      function onSearch(e) {
+        const q = e.target.value.trim().toLowerCase();
+        currentPage = 1;
+        applyFilterAndRender(q);
+      }
+
+      function applyFilterAndRender(query) {
+        let filtered = cleanData.map((r) => ({
+          ...r,
+          date: toDateLabel(r.DateTime),
+          time: toTimeLabel(r.DateTime),
+        }));
+        if (query) {
+          filtered = filtered.filter(
+            (r) =>
+              r.time.toLowerCase().includes(query) ||
+              r.date.toLowerCase().includes(query),
+          );
+        }
+        tableData = filtered;
+        if (sortKey) sortTableData();
+        renderTable();
+      }
+
+      function onSort(key) {
+        if (sortKey === key) {
+          sortAsc = !sortAsc;
+        } else {
+          sortKey = key;
+          sortAsc = true;
+        }
+        sortTableData();
+        currentPage = 1;
+        renderTable();
+      }
+
+      function sortTableData() {
+        tableData.sort((a, b) => {
+          let va = a[sortKey],
+            vb = b[sortKey];
+          if (va === null || va === undefined) va = -Infinity;
+          if (vb === null || vb === undefined) vb = -Infinity;
+          if (typeof va === "string")
+            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+          return sortAsc ? va - vb : vb - va;
+        });
+      }
+
+      function renderTable() {
+        document.querySelectorAll("#dataTable thead th").forEach((th) => {
+          const arrow = th.querySelector(".arrow");
+          arrow.textContent =
+            th.dataset.key === sortKey ? (sortAsc ? "▲" : "▼") : "";
+        });
+
+        const totalPages = Math.max(
+          1,
+          Math.ceil(tableData.length / ROWS_PER_PAGE),
+        );
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * ROWS_PER_PAGE;
+        const pageRows = tableData.slice(start, start + ROWS_PER_PAGE);
+
+        const cols = [
+          "Load (kW)",
+          "SolarAdjusted (kW)",
+          "SolarCurtailed (kW)",
+          "BessChargeFromSolar (kW)",
+          "BessChargeFromGrid (kW)",
+          "BessDischarge (kW)",
+          "SOC (%)",
+          "SOC (kWh)",
+        ];
+
+        document.getElementById("tableBody").innerHTML =
+          pageRows
+            .map(
+              (r) => `
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.time}</td>
+      ${cols.map((c) => `<td>${formatNumber(r[c], c === "SOC (%)" ? 2 : c === "SOC (kWh)" ? 2 : 1)}</td>`).join("")}
+    </tr>
+  `,
+            )
+            .join("") ||
+          `<tr><td colspan="10" style="text-align:center;color:#94A3B8;padding:24px;">Không có dữ liệu phù hợp</td></tr>`;
+
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages) {
+        const el = document.getElementById("pagination");
+        let html = "";
+
+        html += `<button ${currentPage === 1 ? "disabled" : ""} onclick="goToPage(${currentPage - 1})">‹ Prev</button>`;
+
+        const range = getPageRange(currentPage, totalPages);
+        range.forEach((p) => {
+          if (p === "...") {
+            html += `<span class="page-info">...</span>`;
+          } else {
+            html += `<button class="${p === currentPage ? "active" : ""}" onclick="goToPage(${p})">${p}</button>`;
+          }
+        });
+
+        html += `<button ${currentPage === totalPages ? "disabled" : ""} onclick="goToPage(${currentPage + 1})">Next ›</button>`;
+        html += `<span class="page-info">Trang ${currentPage}/${totalPages} — ${tableData.length} bản ghi</span>`;
+
+        el.innerHTML = html;
+      }
+
+      function getPageRange(current, total) {
+        const delta = 2;
+        const range = [];
+        for (let i = 1; i <= total; i++) {
+          if (
+            i === 1 ||
+            i === total ||
+            (i >= current - delta && i <= current + delta)
+          ) {
+            range.push(i);
+          } else if (range[range.length - 1] !== "...") {
+            range.push("...");
+          }
+        }
+        return range;
+      }
+
+      function goToPage(p) {
+        currentPage = p;
+        renderTable();
+      }
+
+      /* =========================================================
+   ENERGY DATA PREP (shared by Solar Utilization + Main Chart)
+   ========================================================= */
+      function prepareEnergyData(raw) {
+        const parsed = [];
+        raw.forEach((r) => {
+          const d = toDate(r.DateTime);
+          if (!d || isNaN(d.getTime())) return;
+
+          const num = (v) => {
+            const n = Number(v);
+            return v === null || v === undefined || isNaN(n) ? 0 : n;
+          };
+          const socValid =
+            r["SOC (%)"] !== null &&
+            r["SOC (%)"] !== undefined &&
+            !isNaN(Number(r["SOC (%)"]));
+
+          parsed.push({
+            date: d,
+            time: d.getTime(),
+            load: num(r["Load (kW)"]),
+            solarAdjusted: num(r["SolarAdjusted (kW)"]),
+            solarCurtailed: num(r["SolarCurtailed (kW)"]),
+            chargeSolar: num(r["BessChargeFromSolar (kW)"]),
+            chargeGrid: num(r["BessChargeFromGrid (kW)"]),
+            discharge: num(r["BessDischarge (kW)"]),
+            socRaw: socValid ? Number(r["SOC (%)"]) : null,
+          });
+        });
+
+        parsed.sort((a, b) => a.time - b.time);
+
+        const seen = new Set();
+        const deduped = [];
+        parsed.forEach((p) => {
+          if (seen.has(p.time)) {
+            console.warn("Duplicate timestamp skipped:", p.date.toISOString());
+            return;
+          }
+          seen.add(p.time);
+          deduped.push(p);
+        });
+
+        if (deduped.length === 0)
+          console.error("No valid records found in chart.json.");
+        return deduped;
+      }
+
+      function computeMedianTimestepHours(records) {
+        if (records.length < 2) return 0.5;
+        const diffs = [];
+        for (let i = 1; i < records.length; i++) {
+          const diffMs = records[i].time - records[i - 1].time;
+          if (diffMs > 0) diffs.push(diffMs / 3600000);
+        }
+        if (diffs.length === 0) return 0.5;
+        diffs.sort((a, b) => a - b);
+        const mid = Math.floor(diffs.length / 2);
+        return diffs.length % 2 !== 0
+          ? diffs[mid]
+          : (diffs[mid - 1] + diffs[mid]) / 2;
+      }
+
+      function detectSocIsFraction(records) {
+        const vals = records
+          .map((r) => r.socRaw)
+          .filter((v) => v !== null && v >= 0);
+        if (vals.length === 0) return false;
+        return Math.max(...vals) <= 1.2;
+      }
+
+      /* =========================================================
+   SECTION 1 — SOLAR UTILIZATION CALCULATIONS
+   ========================================================= */
+      function computeSolarUtilization(records, stepHours) {
+        let totalAdjustedSolarKwh = 0;
+        let solarChargedToBessKwh = 0;
+        let solarUsedDirectlyKwh = 0;
+        let totalSurplusSolarKwh = 0;
+        let surplusSolarChargedToBessKwh = 0;
+
+        records.forEach((r) => {
+          const adjSolar = Math.max(r.solarAdjusted, 0);
+          const load = Math.max(r.load, 0);
+          const chargeSolar = Math.max(r.chargeSolar, 0);
+          // "Adjusted Solar after BESS Charging" is sourced from SolarCurtailed (kW) per current schema
+          const solarAfterBess = Math.max(r.solarCurtailed, 0);
+
+          totalAdjustedSolarKwh += adjSolar * stepHours;
+          solarChargedToBessKwh += chargeSolar * stepHours;
+
+          const usedDirectlyKw = Math.min(load, solarAfterBess);
+          solarUsedDirectlyKwh += usedDirectlyKw * stepHours;
+
+          const surplusKw = Math.max(adjSolar - load, 0);
+          totalSurplusSolarKwh += surplusKw * stepHours;
+
+          const effectiveChargeKw = Math.min(chargeSolar, surplusKw);
+          surplusSolarChargedToBessKwh += effectiveChargeKw * stepHours;
+
+          if (chargeSolar - surplusKw > 1e-6) {
+            console.warn(
+              `BESS Charge from Solar (${chargeSolar.toFixed(2)} kW) exceeds surplus solar (${surplusKw.toFixed(2)} kW) at ${r.date.toISOString()}`,
+            );
+          }
+        });
+
+        const solarCurtailedKwh = Math.max(
+          totalAdjustedSolarKwh - solarUsedDirectlyKwh - solarChargedToBessKwh,
+          0,
+        );
+        const surplusSolarCurtailedKwh = Math.max(
+          totalSurplusSolarKwh - surplusSolarChargedToBessKwh,
+          0,
+        );
+
+        return {
+          totalAdjustedSolarKwh,
+          solarChargedToBessKwh,
+          solarUsedDirectlyKwh,
+          solarCurtailedKwh,
+          totalSurplusSolarKwh,
+          surplusSolarChargedToBessKwh,
+          surplusSolarCurtailedKwh,
+        };
+      }
+
+      function renderDoughnut(canvasId, values, colors) {
+        return new Chart(document.getElementById(canvasId), {
+          type: "doughnut",
+          data: {
+            datasets: [
+              {
+                data: values,
+                backgroundColor: colors,
+                borderColor: "#1E293B",
+                borderWidth: 3,
+                hoverOffset: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#0F172A",
+                borderColor: "#334155",
+                borderWidth: 1,
+                callbacks: { label: (ctx) => `${formatEnergy(ctx.raw)} kWh` },
+              },
+            },
+          },
+        });
+      }
+
+      function buildLegendRows(containerId, items) {
+        document.getElementById(containerId).innerHTML = items
+          .map(
+            (it) => `
+    <div class="solar-legend-row">
+      <div class="left"><span class="dot" style="background:${it.color}"></span>${it.label}</div>
+      <div class="right">
+        <span class="val">${formatEnergy(it.value)} kWh</span>
+        <span class="pct" style="color:${it.color}">${it.pct.toFixed(1)}%</span>
+      </div>
+    </div>`,
+          )
+          .join("");
+      }
+
+      function renderSolarUtilizationSection() {
+        const t = computeSolarUtilization(energyRecords, timestepHours);
+
+        document.getElementById("solarGenSubtitle").textContent =
+          `Total adjusted solar: ${formatEnergy(t.totalAdjustedSolarKwh)} kWh`;
+        document.getElementById("surplusSolarSubtitle").textContent =
+          `Total surplus solar after load: ${formatEnergy(t.totalSurplusSolarKwh)} kWh`;
+
+        const c1 = ["#2DD4BF", "#FBBF24", "#F87171"];
+        renderDoughnut(
+          "donutSolarGen",
+          [
+            t.solarUsedDirectlyKwh,
+            t.solarChargedToBessKwh,
+            t.solarCurtailedKwh,
+          ],
+          c1,
+        );
+        buildLegendRows("legendSolarGen", [
+          {
+            label: "Solar Used Directly",
+            color: c1[0],
+            value: t.solarUsedDirectlyKwh,
+            pct: t.totalAdjustedSolarKwh
+              ? (t.solarUsedDirectlyKwh / t.totalAdjustedSolarKwh) * 100
+              : 0,
+          },
+          {
+            label: "Solar Charged to BESS",
+            color: c1[1],
+            value: t.solarChargedToBessKwh,
+            pct: t.totalAdjustedSolarKwh
+              ? (t.solarChargedToBessKwh / t.totalAdjustedSolarKwh) * 100
+              : 0,
+          },
+          {
+            label: "Solar Curtailed",
+            color: c1[2],
+            value: t.solarCurtailedKwh,
+            pct: t.totalAdjustedSolarKwh
+              ? (t.solarCurtailedKwh / t.totalAdjustedSolarKwh) * 100
+              : 0,
+          },
+        ]);
+
+        const c2 = ["#FBBF24", "#F87171"];
+        renderDoughnut(
+          "donutSurplusSolar",
+          [t.surplusSolarChargedToBessKwh, t.surplusSolarCurtailedKwh],
+          c2,
+        );
+        buildLegendRows("legendSurplusSolar", [
+          {
+            label: "Surplus Solar Charged To BESS",
+            color: c2[0],
+            value: t.surplusSolarChargedToBessKwh,
+            pct: t.totalSurplusSolarKwh
+              ? (t.surplusSolarChargedToBessKwh / t.totalSurplusSolarKwh) * 100
+              : 0,
+          },
+          {
+            label: "Surplus Solar Curtailed",
+            color: c2[1],
+            value: t.surplusSolarCurtailedKwh,
+            pct: t.totalSurplusSolarKwh
+              ? (t.surplusSolarCurtailedKwh / t.totalSurplusSolarKwh) * 100
+              : 0,
+          },
+        ]);
+      }
+
+      /* =========================================================
+   SECTION 2 — MAIN COMBINED TIME-SERIES CHART (ECharts)
+   ========================================================= */
+      function computeSocPercentSeries(records) {
+        const isFraction = detectSocIsFraction(records);
+        return records.map((r) =>
+          r.socRaw === null ? null : isFraction ? r.socRaw * 100 : r.socRaw,
+        );
+      }
+
+      function renderMainChart(records) {
+        if (!records.length) {
+          console.error("No data available to render Main Chart.");
+          return;
+        }
+
+        const socPercents = computeSocPercentSeries(records);
+        const isLarge = records.length > 2000;
+
+        const mainChart = echarts.init(
+          document.getElementById("mainChartEcharts"),
+        );
+
+        const option = {
+          backgroundColor: "transparent",
+          animation: !isLarge,
+          textStyle: {
+            color: "#94A3B8",
+            fontFamily: "'Segoe UI', Roboto, Arial, sans-serif",
+          },
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "cross",
+              label: { backgroundColor: "#334155" },
+            },
+            backgroundColor: "#0F172A",
+            borderColor: "#334155",
+            borderWidth: 1,
+            textStyle: { color: "#E2E8F0" },
+            formatter: (params) => {
+              if (!params.length) return "";
+              let html = `<div style="font-weight:600;margin-bottom:6px;">${new Date(params[0].axisValue).toLocaleString("en-GB")}</div>`;
+              params.forEach((p) => {
+                const unit = p.seriesName === "SOC" ? "%" : "kW";
+                const val =
+                  p.data && p.data[1] !== null && p.data[1] !== undefined
+                    ? Number(p.data[1]).toFixed(2)
+                    : "-";
+                html += `<div style="display:flex;justify-content:space-between;gap:16px;"><span>${p.marker} ${p.seriesName}</span><span style="font-weight:600">${val} ${unit}</span></div>`;
+              });
+              return html;
+            },
+          },
+          legend: {
+            top: 0,
+            textStyle: { color: "#CBD5E1" },
+            data: [
+              "Load",
+              "Solar after BESS Charging",
+              "Available Solar Generation",
+              "BESS Charge from Solar",
+              "BESS Charge from Grid",
+              "BESS Discharge",
+              "SOC",
+            ],
+          },
+          toolbox: {
+            right: 20,
+            top: 0,
+            feature: {
+              restore: {},
+              saveAsImage: { backgroundColor: "#0F172A" },
+            },
+            iconStyle: { borderColor: "#94A3B8" },
+          },
+          grid: { left: 55, right: 55, top: 50, bottom: 70 },
+          xAxis: {
+            type: "time",
+            axisLine: { lineStyle: { color: "#334155" } },
+            axisLabel: { color: "#94A3B8" },
+            splitLine: { show: false },
+          },
+          yAxis: [
+            {
+              type: "value",
+              name: "Power (kW)",
+              min: 0,
+              nameTextStyle: { color: "#94A3B8" },
+              axisLabel: { color: "#94A3B8" },
+              splitLine: { lineStyle: { color: "rgba(148,163,184,0.1)" } },
+            },
+            {
+              type: "value",
+              name: "SOC (%)",
+              min: 0,
+              max: 100,
+              nameTextStyle: { color: "#94A3B8" },
+              axisLabel: { color: "#94A3B8", formatter: "{value}%" },
+              splitLine: { show: false },
+            },
+          ],
+          dataZoom: [
+            { type: "inside", start: 0, end: 100 },
+            {
+              type: "slider",
+              start: 0,
+              end: 100,
+              height: 20,
+              bottom: 10,
+              backgroundColor: "#1E293B",
+              fillerColor: "rgba(59,130,246,0.25)",
+              borderColor: "#334155",
+              textStyle: { color: "#94A3B8" },
+            },
+          ],
+          series: [
+            {
+              name: "Load",
+              type: "line",
+              data: records.map((r) => [r.time, r.load]),
+              yAxisIndex: 0,
+              showSymbol: false,
+              lineStyle: { width: 1.5, color: "#3B82F6" },
+              areaStyle: { color: "rgba(59,130,246,0.25)" },
+              sampling: isLarge ? "lttb" : undefined,
+              z: 1,
+            },
+            {
+              name: "Solar after BESS Charging",
+              type: "line",
+              data: records.map((r) => [r.time, r.solarCurtailed]),
+              yAxisIndex: 0,
+              showSymbol: false,
+              lineStyle: { width: 1.5, color: "#22C55E" },
+              areaStyle: { color: "rgba(34,197,94,0.28)" },
+              sampling: isLarge ? "lttb" : undefined,
+              z: 2,
+            },
+            {
+              name: "BESS Charge from Solar",
+              type: "bar",
+              data: records.map((r) => [r.time, r.chargeSolar]),
+              yAxisIndex: 0,
+              barMaxWidth: 6,
+              itemStyle: { color: "#F59E0B" },
+              large: isLarge,
+              largeThreshold: 2000,
+              z: 3,
+            },
+            {
+              name: "BESS Charge from Grid",
+              type: "bar",
+              data: records.map((r) => [r.time, r.chargeGrid]),
+              yAxisIndex: 0,
+              barMaxWidth: 6,
+              itemStyle: { color: "#A855F7" },
+              large: isLarge,
+              largeThreshold: 2000,
+              z: 4,
+            },
+            {
+              name: "BESS Discharge",
+              type: "bar",
+              data: records.map((r) => [r.time, r.discharge]),
+              yAxisIndex: 0,
+              barMaxWidth: 6,
+              itemStyle: { color: "#EF4444" },
+              large: isLarge,
+              largeThreshold: 2000,
+              z: 5,
+            },
+            {
+              name: "Available Solar Generation",
+              type: "line",
+              data: records.map((r) => [r.time, r.solarAdjusted]),
+              yAxisIndex: 0,
+              showSymbol: false,
+              lineStyle: { width: 1.5, color: "#FDE047", type: "dashed" },
+              sampling: isLarge ? "lttb" : undefined,
+              z: 6,
+            },
+            {
+              name: "SOC",
+              type: "line",
+              data: records.map((r, i) => [r.time, socPercents[i]]),
+              yAxisIndex: 1,
+              showSymbol: false,
+              lineStyle: { width: 1.2, color: "#14B8A6" },
+              connectNulls: true,
+              sampling: isLarge ? "lttb" : undefined,
+              z: 7,
+            },
+          ],
+        };
+
+        mainChart.setOption(option);
+        window.addEventListener("resize", () => mainChart.resize());
+      }
+    </script>
+  </body>
+</html>
